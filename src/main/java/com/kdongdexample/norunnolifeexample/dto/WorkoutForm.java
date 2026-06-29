@@ -1,0 +1,23 @@
+package com.kdongdexample.norunnolifeexample.dto;
+
+import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import jakarta.validation.constraints.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record WorkoutForm(
+        @NotNull
+        WorkoutType type,
+
+        @NotNull @Min(1) @Max(600)
+        Integer durationMinutes,
+
+        @Size(max = 500)
+        String memo,
+
+        @PastOrPresent
+        LocalDateTime workoutDateTime,
+
+        List<WorkoutDetailForm> details
+) {}
