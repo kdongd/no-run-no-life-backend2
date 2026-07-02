@@ -40,7 +40,8 @@ public class WorkoutController {
     }
 
     @DeleteMapping("/workouts/{id}")
-    public void deleteWorkout(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteWorkout(@PathVariable Long id) {
         service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

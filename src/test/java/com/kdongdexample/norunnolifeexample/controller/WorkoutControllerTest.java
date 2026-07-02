@@ -93,7 +93,7 @@ class WorkoutControllerTest {
     @DisplayName("DELETE /workouts/{id} 삭제 성공")
     void deleteWorkout() throws Exception {
         mockMvc.perform(delete("/workouts/1"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 
     // 클래스 내부 추가
