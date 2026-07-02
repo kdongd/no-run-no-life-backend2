@@ -32,4 +32,8 @@ public class WorkoutDetail {
         detail.note = note;
         return detail;
     }
+
+    public void assignWorkout(Workout workout) {
+        this.workout = workout;
+    }
 }

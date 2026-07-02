@@ -46,11 +46,17 @@ public class Workout {
         saved.durationMinutes = workout.durationMinutes;
         saved.memo = workout.memo;
         saved.workoutDateTime = workout.workoutDateTime;
+
+        for (WorkoutDetail detail : workout.details) {
+            saved.addDetail(detail);
+        }
+
         return saved;
     }
 
     public void addDetail(WorkoutDetail detail) {
         details.add(detail);
+        detail.assignWorkout(this);
     }
 
 }

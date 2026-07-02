@@ -32,4 +32,18 @@ class WorkoutTest {
         assertThat(workout.getDetails()).hasSize(1);
         assertThat(workout.getDetails().get(0).getLabel()).isEqualTo("1라운드");
     }
+
+    @Test
+    @DisplayName("withId()로 저장해도 details가 유지된다")
+    void withId_details_유지() {
+        Workout workout = Workout.create(WorkoutType.BOXING, 60, "스파링", LocalDateTime.now());
+        WorkoutDetail detail = WorkoutDetail.create(workout, 1, "1라운드", 180, "섀도우");
+        workout.addDetail(detail);
+
+        Workout saved = Workout.withId(1L, workout);
+
+        assertThat(saved.getDetails()).hasSize(1);
+        assertThat(saved.getDetails().get(0).getLabel()).isEqualTo("1라운드");
+        assertThat(saved.getDetails().get(0).getWorkout()).isEqualTo(saved);
+    }
 }
