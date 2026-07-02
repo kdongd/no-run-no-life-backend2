@@ -14,7 +14,7 @@ public class MemoryWorkoutRepository implements WorkoutRepository {
 
     @Override
     public Workout save(Workout workout) {
-        long id = sequence.incrementAndGet();
+        Long id = sequence.incrementAndGet();
         Workout saved = Workout.withId(id, workout);
         store.put(id, saved);
         return saved;

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public record WorkoutResponse(
-        long id,
+        Long id,
         WorkoutType type,
         Integer durationMinutes,
         String memo,

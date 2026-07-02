@@ -18,7 +18,7 @@ public class Workout {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
 
     @Enumerated(EnumType.STRING)
     private WorkoutType type;
@@ -39,7 +39,7 @@ public class Workout {
         return workout;
     }
 
-    public static Workout withId(long id, Workout workout) {
+    public static Workout withId(Long id, Workout workout) {
         Workout saved = new Workout();
         saved.id = id;
         saved.type = workout.type;
