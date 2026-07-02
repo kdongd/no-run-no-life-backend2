@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @CrossOrigin(origins = {"http://localhost:5500", "http://127.0.0.1:5500"})
 public class WorkoutController {
-    WorkoutService service;
+    private final WorkoutService service;
 
     public WorkoutController(WorkoutService service) {
         this.service = service;

@@ -15,7 +15,7 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 public class WorkoutService {
-    WorkoutRepository repository;
+    private final WorkoutRepository repository;
 
     public WorkoutService(WorkoutRepository repository) {
         this.repository = repository;
