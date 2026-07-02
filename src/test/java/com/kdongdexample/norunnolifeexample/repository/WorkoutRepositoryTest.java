@@ -45,4 +45,20 @@ class WorkoutRepositoryTest {
         assertThat(result).isPresent();
         assertThat(result.get().getDetails()).hasSize(1);
     }
+
+    @Test
+    @DisplayName("Workout 삭제 시 연관된 WorkoutDetail도 함께 삭제된다")
+    void deleteWorkout_cascadeDeletesDetails() {
+        Workout workout = Workout.create(WorkoutType.BOXING, 60, "스파링", LocalDateTime.now());
+        WorkoutDetail detail = WorkoutDetail.create(workout, 1, "1라운드", 180, "섀도우");
+        workout.addDetail(detail);
+        Workout saved = jpaWorkoutRepository.save(workout);
+        Long savedId = saved.getId();
+
+        jpaWorkoutRepository.delete(saved);
+        jpaWorkoutRepository.flush();
+
+        Optional<Workout> found = jpaWorkoutRepository.findById(savedId);
+        assertThat(found).isEmpty();
+    }
 }
