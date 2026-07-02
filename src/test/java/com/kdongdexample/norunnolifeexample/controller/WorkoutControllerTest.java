@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.service.WorkoutService;
@@ -109,5 +110,19 @@ class WorkoutControllerTest {
                 .andExpect(jsonPath("$.details").isArray())
                 .andExpect(jsonPath("$.details[0].label").value("1라운드"))
                 .andExpect(jsonPath("$.details[0].workout").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("details 내부 값이 검증 실패하면 400을 반환한다")
+    void createWorkout_detailsValidationFail() throws Exception {
+        List<WorkoutDetailForm> invalidDetails = List.of(
+                new WorkoutDetailForm(null, null, null, null)  // sequence, label, durationSeconds 다 null
+        );
+        WorkoutForm form = new WorkoutForm(WorkoutType.BOXING, 60, "메모", LocalDateTime.now(), invalidDetails);
+
+        mockMvc.perform(post("/workouts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(form)))
+                .andExpect(status().isBadRequest());
     }
 }

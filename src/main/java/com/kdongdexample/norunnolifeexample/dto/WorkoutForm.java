@@ -1,6 +1,7 @@
 package com.kdongdexample.norunnolifeexample.dto;
 
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDateTime;
@@ -19,5 +20,6 @@ public record WorkoutForm(
         @PastOrPresent
         LocalDateTime workoutDateTime,
 
+        @Valid
         List<WorkoutDetailForm> details
 ) {}
