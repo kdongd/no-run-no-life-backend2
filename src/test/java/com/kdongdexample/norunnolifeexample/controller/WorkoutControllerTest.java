@@ -2,6 +2,7 @@ package com.kdongdexample.norunnolifeexample.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
+import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
@@ -92,5 +93,21 @@ class WorkoutControllerTest {
     void deleteWorkout() throws Exception {
         mockMvc.perform(delete("/workouts/1"))
                 .andExpect(status().isOk());
+    }
+
+    // 클래스 내부 추가
+    @Test
+    @DisplayName("GET /workouts/{id} details가 있어도 순환참조 없이 정상 직렬화된다")
+    void getWorkout_withDetails_noCircularReference() throws Exception {
+        Workout workout = Workout.create(WorkoutType.BOXING, 60, "스파링", LocalDateTime.now());
+        WorkoutDetail detail = WorkoutDetail.create(workout, 1, "1라운드", 180, "섀도우");
+        workout.addDetail(detail);
+        given(service.findById(1L)).willReturn(workout);
+
+        mockMvc.perform(get("/workouts/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0].label").value("1라운드"))
+                .andExpect(jsonPath("$.details[0].workout").doesNotExist());
     }
 }
