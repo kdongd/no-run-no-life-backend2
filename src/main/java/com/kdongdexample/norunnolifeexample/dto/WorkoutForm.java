@@ -14,10 +14,10 @@ public record WorkoutForm(
         @NotNull @Min(1) @Max(600)
         Integer durationMinutes,
 
-        @Size(max = 500)
+        @Size(max = 255)
         String memo,
 
-        @PastOrPresent
+        @NotNull @PastOrPresent
         LocalDateTime workoutDateTime,
 
         @Valid

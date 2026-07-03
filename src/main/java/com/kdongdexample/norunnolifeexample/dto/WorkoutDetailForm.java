@@ -15,6 +15,6 @@ public record WorkoutDetailForm(
         @NotNull @Min(1) @Max(36000)
         Integer durationSeconds,
 
-        @Size(max = 500)
+        @Size(max = 255)
         String note
 ) {}
