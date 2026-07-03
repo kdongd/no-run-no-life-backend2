@@ -7,12 +7,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 class WorkoutRepositoryTest {
@@ -60,5 +62,17 @@ class WorkoutRepositoryTest {
 
         Optional<Workout> found = jpaWorkoutRepository.findById(savedId);
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("memo가 255자를 초과하면 DB 저장 시 예외가 발생한다")
+    void memo가_255자_초과하면_예외발생() {
+        String longMemo = "가".repeat(300);
+        Workout workout = Workout.create(WorkoutType.RUNNING, 30, longMemo, LocalDateTime.now());
+
+        assertThatThrownBy(() -> {
+            jpaWorkoutRepository.save(workout);
+            jpaWorkoutRepository.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 }
