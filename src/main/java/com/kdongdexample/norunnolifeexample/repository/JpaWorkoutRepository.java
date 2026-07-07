@@ -2,7 +2,8 @@ package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,30 +20,17 @@ public interface JpaWorkoutRepository extends JpaRepository<Workout, Long> {
     @Query("select w from Workout w left join fetch w.details where w.id = :id")
     Optional<Workout> findByIdWithDetails(@Param("id") Long id);
 
-    // type만
-    List<Workout> findByType(WorkoutType type, Sort sort);
+    Page<Workout> findByType(WorkoutType type, Pageable pageable);
 
-    // 기간만 — 둘 다 있음
-    List<Workout> findByWorkoutDateTimeBetween(LocalDateTime from, LocalDateTime to, Sort sort);
+    Page<Workout> findByWorkoutDateTimeBetween(LocalDateTime from, LocalDateTime to, Pageable pageable);
 
-    // 기간만 — from만 (그 이후 전부)
-    List<Workout> findByWorkoutDateTimeAfter(LocalDateTime from, Sort sort);
+    Page<Workout> findByWorkoutDateTimeAfter(LocalDateTime from, Pageable pageable);
 
-    // 기간만 — to만 (그 이전 전부)
-    List<Workout> findByWorkoutDateTimeBefore(LocalDateTime to, Sort sort);
+    Page<Workout> findByWorkoutDateTimeBefore(LocalDateTime to, Pageable pageable);
 
-    // type + 기간 둘 다
-    List<Workout> findByTypeAndWorkoutDateTimeBetween(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort);
+    Page<Workout> findByTypeAndWorkoutDateTimeBetween(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable);
 
-    // type + from만
-    List<Workout> findByTypeAndWorkoutDateTimeAfter(WorkoutType type, LocalDateTime from, Sort sort);
+    Page<Workout> findByTypeAndWorkoutDateTimeAfter(WorkoutType type, LocalDateTime from, Pageable pageable);
 
-    // type + to만
-    List<Workout> findByTypeAndWorkoutDateTimeBefore(WorkoutType type, LocalDateTime to, Sort sort);
-
-    @Query("select w from Workout w where w.type = :type and w.workoutDateTime between :from and :to")
-    List<Workout> findByTypeAndDateRangeJpql(@Param("type") WorkoutType type,
-                                             @Param("from") LocalDateTime from,
-                                             @Param("to") LocalDateTime to,
-                                             Sort sort);
+    Page<Workout> findByTypeAndWorkoutDateTimeBefore(WorkoutType type, LocalDateTime to, Pageable pageable);
 }

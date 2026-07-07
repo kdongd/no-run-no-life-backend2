@@ -40,4 +40,10 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(400, "요청 파라미터 형식이 올바르지 않습니다: " + e.getName(), List.of());
         return ResponseEntity.badRequest().body(response);
     }
+
+    @ExceptionHandler(InvalidPageSizeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidPageSize(InvalidPageSizeException e) {
+        ErrorResponse response = new ErrorResponse(400, e.getMessage(), List.of());
+        return ResponseEntity.badRequest().body(response);
+    }
 }

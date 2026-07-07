@@ -2,7 +2,8 @@ package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,5 +15,5 @@ public interface WorkoutRepository {
     List<Workout> findAll();
     void delete(Workout workout);
 
-    List<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort);
+    Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable);
 }

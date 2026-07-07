@@ -3,7 +3,8 @@ package com.kdongdexample.norunnolifeexample.repository;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -41,32 +42,32 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository {
     }
 
     @Override
-    public List<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort) {
+    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
         boolean hasType = type != null;
         boolean hasFrom = from != null;
         boolean hasTo = to != null;
 
         if (hasType && hasFrom && hasTo) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBetween(type, from, to, sort);
+            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBetween(type, from, to, pageable);
         }
         if (hasType && hasFrom) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeAfter(type, from, sort);
+            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeAfter(type, from, pageable);
         }
         if (hasType && hasTo) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBefore(type, to, sort);
+            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBefore(type, to, pageable);
         }
         if (hasType) {
-            return jpaWorkoutRepository.findByType(type, sort);
+            return jpaWorkoutRepository.findByType(type, pageable);
         }
         if (hasFrom && hasTo) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeBetween(from, to, sort);
+            return jpaWorkoutRepository.findByWorkoutDateTimeBetween(from, to, pageable);
         }
         if (hasFrom) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeAfter(from, sort);
+            return jpaWorkoutRepository.findByWorkoutDateTimeAfter(from, pageable);
         }
         if (hasTo) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeBefore(to, sort);
+            return jpaWorkoutRepository.findByWorkoutDateTimeBefore(to, pageable);
         }
-        return jpaWorkoutRepository.findAll(sort);
+        return jpaWorkoutRepository.findAll(pageable);
     }
 }

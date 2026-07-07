@@ -5,9 +5,11 @@ import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
+import com.kdongdexample.norunnolifeexample.exception.InvalidPageSizeException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,9 @@ import java.util.List;
 @Service
 @Transactional(readOnly = true)
 public class WorkoutService {
+
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final WorkoutRepository repository;
 
     public WorkoutService(WorkoutRepository repository) {
@@ -52,7 +57,10 @@ public class WorkoutService {
         repository.delete(workout);
     }
 
-    public List<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort) {
-        return repository.search(type, from, to, sort);
+    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+        if (pageable.getPageSize() > MAX_PAGE_SIZE) {
+            throw new InvalidPageSizeException(pageable.getPageSize(), MAX_PAGE_SIZE);
+        }
+        return repository.search(type, from, to, pageable);
     }
 }
