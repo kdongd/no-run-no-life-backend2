@@ -2,6 +2,8 @@ package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -69,5 +71,15 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository {
             return jpaWorkoutRepository.findByWorkoutDateTimeBefore(to, pageable);
         }
         return jpaWorkoutRepository.findAll(pageable);
+    }
+
+    @Override
+    public List<WorkoutStatByType> statsByType() {
+        return jpaWorkoutRepository.statsByType();
+    }
+
+    @Override
+    public List<WorkoutMonthlyStat> statsByMonth() {
+        return jpaWorkoutRepository.statsByMonth();
     }
 }

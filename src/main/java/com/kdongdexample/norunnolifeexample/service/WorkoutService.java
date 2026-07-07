@@ -5,6 +5,8 @@ import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.exception.InvalidPageSizeException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
@@ -62,5 +64,13 @@ public class WorkoutService {
             throw new InvalidPageSizeException(pageable.getPageSize(), MAX_PAGE_SIZE);
         }
         return repository.search(type, from, to, pageable);
+    }
+
+    public List<WorkoutStatByType> statsByType() {
+        return repository.statsByType();
+    }
+
+    public List<WorkoutMonthlyStat> statsByMonth() {
+        return repository.statsByMonth();
     }
 }

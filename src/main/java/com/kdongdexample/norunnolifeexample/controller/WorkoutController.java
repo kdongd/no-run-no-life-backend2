@@ -2,9 +2,7 @@ package com.kdongdexample.norunnolifeexample.controller;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutResponse;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutSummaryResponse;
+import com.kdongdexample.norunnolifeexample.dto.*;
 import com.kdongdexample.norunnolifeexample.service.WorkoutService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -17,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
 @CrossOrigin(origins = {"http://localhost:5500", "http://127.0.0.1:5500"})
@@ -54,5 +53,15 @@ public class WorkoutController {
     public ResponseEntity<Void> deleteWorkout(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/workouts/stats/by-type")
+    public ResponseEntity<List<WorkoutStatByType>> getStatsByType() {
+        return ResponseEntity.ok(service.statsByType());
+    }
+
+    @GetMapping("/workouts/stats/monthly")
+    public ResponseEntity<List<WorkoutMonthlyStat>> getStatsByMonth() {
+        return ResponseEntity.ok(service.statsByMonth());
     }
 }
