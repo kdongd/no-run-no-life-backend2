@@ -50,7 +50,8 @@ src/main/java/com/kdongdexample/norunnolifeexample
 │   ├── JpaWorkoutRepositoryAdapter.java
 │   └── MemoryWorkoutRepository.java
 └── service
-└── WorkoutService.java
+    └── WorkoutService.java
+
 src/test/java/com/kdongdexample/norunnolifeexample
 ├── controller
 │   └── WorkoutControllerTest.java
@@ -59,7 +60,8 @@ src/test/java/com/kdongdexample/norunnolifeexample
 ├── repository
 │   └── WorkoutRepositoryTest.java
 └── service
-└── WorkoutServiceTest.java
+    └── WorkoutServiceTest.java
+
 ---
 ## 📦 설계 의도
 ### 1) Controller
