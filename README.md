@@ -16,51 +16,51 @@
 | ORM | Spring Data JPA / Hibernate |
 ---
 ## ⚙️ 실행 방법
-```bash
-./gradlew bootRun
-```
+
+    ./gradlew bootRun
+
 서버 실행 후 `http://localhost:8080` 에서 API 사용 가능  
 H2 콘솔: `http://localhost:8080/h2-console`
 ---
 ## 📁 프로젝트 구조
 
-src/main/java/com/kdongdexample/norunnolifeexample
-├── controller
-│   └── WorkoutController.java
-├── domain
-│   ├── Workout.java
-│   ├── WorkoutDetail.java
-│   └── WorkoutType.java
-├── dto
-│   ├── WorkoutForm.java
-│   ├── WorkoutDetailForm.java
-│   ├── WorkoutResponse.java
-│   ├── WorkoutDetailResponse.java
-│   ├── WorkoutSummaryResponse.java
-│   ├── WorkoutStatByType.java
-│   └── WorkoutMonthlyStat.java
-├── exception
-│   ├── ErrorResponse.java
-│   ├── GlobalExceptionHandler.java
-│   ├── WorkoutNotFoundException.java
-│   └── InvalidPageSizeException.java
-├── repository
-│   ├── WorkoutRepository.java
-│   ├── JpaWorkoutRepository.java
-│   ├── JpaWorkoutRepositoryAdapter.java
-│   └── MemoryWorkoutRepository.java
-└── service
-    └── WorkoutService.java
+    src/main/java/com/kdongdexample/norunnolifeexample
+    ├── controller
+    │   └── WorkoutController.java
+    ├── domain
+    │   ├── Workout.java
+    │   ├── WorkoutDetail.java
+    │   └── WorkoutType.java
+    ├── dto
+    │   ├── WorkoutForm.java
+    │   ├── WorkoutDetailForm.java
+    │   ├── WorkoutResponse.java
+    │   ├── WorkoutDetailResponse.java
+    │   ├── WorkoutSummaryResponse.java
+    │   ├── WorkoutStatByType.java
+    │   └── WorkoutMonthlyStat.java
+    ├── exception
+    │   ├── ErrorResponse.java
+    │   ├── GlobalExceptionHandler.java
+    │   ├── WorkoutNotFoundException.java
+    │   └── InvalidPageSizeException.java
+    ├── repository
+    │   ├── WorkoutRepository.java
+    │   ├── JpaWorkoutRepository.java
+    │   ├── JpaWorkoutRepositoryAdapter.java
+    │   └── MemoryWorkoutRepository.java
+    └── service
+        └── WorkoutService.java
 
-src/test/java/com/kdongdexample/norunnolifeexample
-├── controller
-│   └── WorkoutControllerTest.java
-├── domain
-│   └── WorkoutTest.java
-├── repository
-│   └── WorkoutRepositoryTest.java
-└── service
-    └── WorkoutServiceTest.java
+    src/test/java/com/kdongdexample/norunnolifeexample
+    ├── controller
+    │   └── WorkoutControllerTest.java
+    ├── domain
+    │   └── WorkoutTest.java
+    ├── repository
+    │   └── WorkoutRepositoryTest.java
+    └── service
+        └── WorkoutServiceTest.java
 
 ---
 ## 📦 설계 의도
@@ -122,7 +122,9 @@ src/test/java/com/kdongdexample/norunnolifeexample
 | GET | `/workouts/stats/monthly` | 월별 운동 횟수 통계 |
 
 예시:
-GET /workouts?type=BOXING&from=2026-05-01T00:00:00&to=2026-05-31T23:59:59&sort=workoutDateTime,desc&page=0&size=10
+
+    GET /workouts?type=BOXING&from=2026-05-01T00:00:00&to=2026-05-31T23:59:59&sort=workoutDateTime,desc&page=0&size=10
+
 ---
 ## ✅ 구현 기능
 - 운동 기록 등록 / 단건 조회 / 삭제 API
