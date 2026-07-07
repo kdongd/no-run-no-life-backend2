@@ -1,8 +1,11 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
+import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,5 +36,10 @@ public class MemoryWorkoutRepository implements WorkoutRepository {
     @Override
     public void delete(Workout workout) {
         store.remove(workout.getId());
+    }
+
+    @Override
+    public List<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort) {
+        throw new UnsupportedOperationException("MemoryWorkoutRepository는 검색 기능을 지원하지 않습니다.");
     }
 }

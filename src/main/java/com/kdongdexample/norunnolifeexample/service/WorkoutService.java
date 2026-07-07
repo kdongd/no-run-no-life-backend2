@@ -2,13 +2,16 @@ package com.kdongdexample.norunnolifeexample.service;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
+import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -49,5 +52,7 @@ public class WorkoutService {
         repository.delete(workout);
     }
 
-
+    public List<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Sort sort) {
+        return repository.search(type, from, to, sort);
+    }
 }
