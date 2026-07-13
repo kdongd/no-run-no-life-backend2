@@ -50,10 +50,6 @@ public class WorkoutService {
         return repository.save(workout);
     }
 
-    public List<Workout> findAll() {
-        return repository.findAll();
-    }
-
     public Workout findById(Long id) {
         return repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
     }

@@ -28,7 +28,7 @@ class WorkoutRepositoryTest {
         Workout workout = Workout.create(WorkoutType.RUNNING, 30, "테스트", LocalDateTime.now());
         jpaWorkoutRepository.save(workout);
 
-        List<Workout> result = jpaWorkoutRepository.findAllWithDetails();
+        List<Workout> result = jpaWorkoutRepository.findAll();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getType()).isEqualTo(WorkoutType.RUNNING);

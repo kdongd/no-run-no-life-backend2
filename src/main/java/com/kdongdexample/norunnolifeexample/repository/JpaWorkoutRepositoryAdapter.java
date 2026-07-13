@@ -31,11 +31,6 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public List<Workout> findAll() {
-        return jpaWorkoutRepository.findAllWithDetails();
-    }
-
-    @Override
     public Optional<Workout> findById(Long id) {
         return jpaWorkoutRepository.findByIdWithDetails(id);
     }

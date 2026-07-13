@@ -2,7 +2,11 @@ package com.kdongdexample.norunnolifeexample.controller;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
-import com.kdongdexample.norunnolifeexample.dto.*;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutResponse;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutSummaryResponse;
 import com.kdongdexample.norunnolifeexample.service.WorkoutService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -18,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:5500", "http://127.0.0.1:5500"})
+@CrossOrigin(origins = "#{'${cors.allowed-origins}'.split(',')}")
 public class WorkoutController {
     private final WorkoutService service;
 

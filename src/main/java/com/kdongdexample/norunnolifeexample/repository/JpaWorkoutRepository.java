@@ -13,9 +13,6 @@ import java.util.Optional;
 
 public interface JpaWorkoutRepository extends JpaRepository<Workout, Long>, JpaSpecificationExecutor<Workout> {
 
-    @Query("select distinct w from Workout w left join fetch w.details")
-    List<Workout> findAllWithDetails();
-
     @Query("select w from Workout w left join fetch w.details where w.id = :id")
     Optional<Workout> findByIdWithDetails(@Param("id") Long id);
 

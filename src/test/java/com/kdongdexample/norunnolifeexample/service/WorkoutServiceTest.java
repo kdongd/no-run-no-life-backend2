@@ -66,30 +66,6 @@ class WorkoutServiceTest {
     }
 
     @Test
-    @DisplayName("저장된 운동 기록이 없을 때 빈 리스트 반환")
-    void findAll_empty() {
-        given(repository.findAll()).willReturn(List.of());
-
-        List<Workout> result = service().findAll();
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    @DisplayName("저장된 운동 기록 전체 반환")
-    void findAll_multiple() {
-        List<Workout> workouts = List.of(
-                Workout.create(WorkoutType.RUNNING, 30, "메모1", now),
-                Workout.create(WorkoutType.BOXING, 60, "메모2", now)
-        );
-        given(repository.findAll()).willReturn(workouts);
-
-        List<Workout> result = service().findAll();
-
-        assertThat(result).hasSize(2);
-    }
-
-    @Test
     @DisplayName("존재하는 id 조회 성공")
     void findById_success() {
         Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", now);
