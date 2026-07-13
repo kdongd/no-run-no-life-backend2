@@ -9,6 +9,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
+import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,9 +29,11 @@ public class WorkoutService {
     private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of("workoutDateTime", "durationMinutes", "type");
 
     private final WorkoutRepository repository;
+    private final WorkoutQueryRepository queryRepository;
 
-    public WorkoutService(WorkoutRepository repository) {
+    public WorkoutService(WorkoutRepository repository, WorkoutQueryRepository queryRepository) {
         this.repository = repository;
+        this.queryRepository = queryRepository;
     }
 
     @Transactional
@@ -63,7 +66,7 @@ public class WorkoutService {
 
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
         validateSort(pageable.getSort());
-        return repository.search(type, from, to, pageable);
+        return queryRepository.search(type, from, to, pageable);
     }
 
     private void validateSort(Sort sort) {
@@ -75,10 +78,10 @@ public class WorkoutService {
     }
 
     public List<WorkoutStatByType> statsByType() {
-        return repository.statsByType();
+        return queryRepository.statsByType();
     }
 
     public List<WorkoutMonthlyStat> statsByMonth() {
-        return repository.statsByMonth();
+        return queryRepository.statsByMonth();
     }
 }

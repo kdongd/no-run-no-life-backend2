@@ -1,14 +1,8 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
-import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -39,20 +33,5 @@ public class MemoryWorkoutRepository implements WorkoutRepository {
     @Override
     public void delete(Workout workout) {
         store.remove(workout.getId());
-    }
-
-    @Override
-    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        throw new UnsupportedOperationException("MemoryWorkoutRepository는 검색 기능을 지원하지 않습니다.");
-    }
-
-    @Override
-    public List<WorkoutStatByType> statsByType() {
-        throw new UnsupportedOperationException("MemoryWorkoutRepository는 통계 기능을 지원하지 않습니다.");
-    }
-
-    @Override
-    public List<WorkoutMonthlyStat> statsByMonth() {
-        throw new UnsupportedOperationException("MemoryWorkoutRepository는 통계 기능을 지원하지 않습니다.");
     }
 }

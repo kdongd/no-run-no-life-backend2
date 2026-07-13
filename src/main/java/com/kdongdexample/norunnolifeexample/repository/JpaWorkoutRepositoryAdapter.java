@@ -17,7 +17,7 @@ import java.util.Optional;
 
 @Repository
 @Primary
-public class JpaWorkoutRepositoryAdapter implements WorkoutRepository {
+public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQueryRepository {
 
     private final JpaWorkoutRepository jpaWorkoutRepository;
 

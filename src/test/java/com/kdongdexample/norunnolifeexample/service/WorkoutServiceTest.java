@@ -5,6 +5,7 @@ import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
+import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,10 +27,13 @@ class WorkoutServiceTest {
     @Mock
     private WorkoutRepository repository;
 
+    @Mock
+    private WorkoutQueryRepository queryRepository;
+
     private final LocalDateTime now = LocalDateTime.now();
 
     private WorkoutService service() {
-        return new WorkoutService(repository);
+        return new WorkoutService(repository, queryRepository);
     }
 
     @Test
