@@ -43,11 +43,13 @@ H2 콘솔: `http://localhost:8080/h2-console`
     │   ├── ErrorResponse.java
     │   ├── GlobalExceptionHandler.java
     │   ├── WorkoutNotFoundException.java
-    │   └── InvalidPageSizeException.java
+    │   └── InvalidSortPropertyException.java
     ├── repository
     │   ├── WorkoutRepository.java
+    │   ├── WorkoutQueryRepository.java
     │   ├── JpaWorkoutRepository.java
     │   ├── JpaWorkoutRepositoryAdapter.java
+    │   ├── WorkoutSpecifications.java
     │   └── MemoryWorkoutRepository.java
     └── service
         └── WorkoutService.java
@@ -68,7 +70,7 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - `@RestController`로 JSON 응답
 - `@Valid`로 요청 데이터 검증
 - `ResponseEntity`로 HTTP 상태코드 명시적 제어 (등록 201, 조회 200)
-- `@CrossOrigin`으로 프론트엔드 CORS 허용
+- `@CrossOrigin`으로 프론트엔드 CORS 허용 (origin은 `application.yml`의 `cors.allowed-origins`로 설정화)
 - 목록 조회는 `type`, `from`, `to`, `Pageable` 파라미터를 받아 검색·페이징 처리
 
 ### 2) Domain
@@ -89,27 +91,34 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - `WorkoutStatByType`, `WorkoutMonthlyStat` — 통계 API용 DTO Projection
 
 ### 4) Repository
-- 어댑터 패턴 적용 — 서비스가 구현체에 의존하지 않고 `WorkoutRepository` 인터페이스에만 의존
-- `JpaWorkoutRepository` — Spring Data JPA, `LEFT JOIN FETCH`로 N+1 해결
-- `JpaWorkoutRepositoryAdapter` — JpaWorkoutRepository를 감싸 WorkoutRepository 구현
-  - 타입/기간 조건 조합(8가지)에 따라 쿼리 메서드 분기
-  - `from`만 있으면 그 이후 전부, `to`만 있으면 그 이전 전부로 처리
+- 인터페이스 분리 — `WorkoutRepository`(CRUD 전용: save/findById/delete)와
+  `WorkoutQueryRepository`(검색/통계: search/statsByType/statsByMonth)를 분리
+  - 서비스는 두 인터페이스에만 의존, 구현체 교체 가능
+- `JpaWorkoutRepository` — Spring Data JPA, `JpaSpecificationExecutor` 상속
+  - 단건 조회(`findByIdWithDetails`)는 `LEFT JOIN FETCH`로 N+1 해결
+  - 목록 검색은 `WorkoutSpecifications`로 동적 조건을 조합해 처리 (파생 쿼리 메서드 방식 대신 Specification 사용)
+- `JpaWorkoutRepositoryAdapter` — `WorkoutRepository`, `WorkoutQueryRepository` 모두 구현
+  - `search()`는 type/from/to 존재 여부에 따라 `WorkoutSpecifications`의 조건들을 동적으로 조합
+  - `from`/`to` 경계는 둘 다 포함(`greaterThanOrEqualTo`/`lessThanOrEqualTo`)으로 통일
 - `MemoryWorkoutRepository` — 메모리 저장소, `ConcurrentHashMap` + `AtomicLong`으로 동시성 처리
-  - `search()`, `statsByType()`, `statsByMonth()`는 미사용 구현체라 `UnsupportedOperationException` 처리
+  - `WorkoutRepository`(CRUD)만 구현, 검색/통계 기능은 제공하지 않음
 - 통계는 DTO Projection(`select new ...`)으로 DB GROUP BY 집계 — 애플리케이션 레벨 합산 금지
+  - `statsByType()`은 `coalesce(sum(...), 0L)`로 합계가 null이 되는 경우를 방어
+  - `statsByMonth()`은 `extract(year/month from ...)`를 사용해 DB 방언 종속성 제거
 
 ### 5) Service
 - `@Transactional(readOnly = true)` 클래스 레벨 적용 — 조회 성능 최적화
 - 쓰기 메서드에만 `@Transactional` 재선언
-- 목록 조회 시 페이지 크기 상한(100) 검증
+- 목록 조회 시 정렬 필드 화이트리스트 검증 (`workoutDateTime`, `durationMinutes`, `type`만 허용)
+- 페이지 크기 상한은 `spring.data.web.pageable.max-page-size`(100) 설정으로 초과분을 자동 조정
 
 ### 6) Exception
 - `@RestControllerAdvice`로 전역 예외 처리
 - `WorkoutNotFoundException` → 404
 - `MethodArgumentNotValidException` → 400 + 필드별 에러 메시지
-- `PropertyReferenceException` → 400 (정렬 필드 오류)
+- `PropertyReferenceException` → 400 (정렬 필드가 엔티티에 존재하지 않을 때)
 - `MethodArgumentTypeMismatchException` → 400 (요청 파라미터 타입 오류)
-- `InvalidPageSizeException` → 400 (페이지 크기 초과)
+- `InvalidSortPropertyException` → 400 (화이트리스트에 없는 정렬 필드 요청)
 ---
 ## 📡 API 엔드포인트
 | Method | URI | 설명 |
@@ -130,10 +139,11 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - 운동 기록 등록 / 단건 조회 / 삭제 API
 - 운동 세부 기록 (WorkoutDetail) 1:N 관계 관리
 - 서버 사이드 유효성 검증
-- N+1 문제 해결 (LEFT JOIN FETCH)
+- 단건 조회 N+1 문제 해결 (LEFT JOIN FETCH)
 - 전역 예외 처리
-- JPA / 메모리 저장소 교체 가능한 어댑터 패턴
-- CORS 설정으로 프론트엔드 연동
-- 타입·기간 조건 검색 + 정렬 (쿼리 메서드 기반)
-- 페이징 처리 (목록 응답에서 details 제외)
-- DB 집계 기반 통계 API (타입별 / 월별)
+- JPA / 메모리 저장소 교체 가능한 어댑터 패턴 + CRUD/Query 인터페이스 분리
+- CORS 설정으로 프론트엔드 연동 (설정 파일로 externalize)
+- 타입·기간 조건 검색 + 정렬 (Specification 기반, 경계 정책 통일)
+- 정렬 필드 화이트리스트 검증
+- 페이징 처리 (목록 응답에서 details 제외, 상한 100건 자동 조정)
+- DB 집계 기반 통계 API (타입별 / 월별), null 합계 방어 및 DB 방언 이식성 확보
