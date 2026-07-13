@@ -41,12 +41,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-    @ExceptionHandler(InvalidPageSizeException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidPageSize(InvalidPageSizeException e) {
-        ErrorResponse response = new ErrorResponse(400, e.getMessage(), List.of());
-        return ResponseEntity.badRequest().body(response);
-    }
-
     @ExceptionHandler(InvalidSortPropertyException.class)
     public ResponseEntity<ErrorResponse> handleInvalidSortProperty(InvalidSortPropertyException e) {
         ErrorResponse response = new ErrorResponse(400, e.getMessage(), List.of());

@@ -7,7 +7,6 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
-import com.kdongdexample.norunnolifeexample.exception.InvalidPageSizeException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
@@ -26,7 +25,6 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class WorkoutService {
 
-    private static final int MAX_PAGE_SIZE = 100;
     private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of("workoutDateTime", "durationMinutes", "type");
 
     private final WorkoutRepository repository;
@@ -64,9 +62,6 @@ public class WorkoutService {
     }
 
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        if (pageable.getPageSize() > MAX_PAGE_SIZE) {
-            throw new InvalidPageSizeException(pageable.getPageSize(), MAX_PAGE_SIZE);
-        }
         validateSort(pageable.getSort());
         return repository.search(type, from, to, pageable);
     }

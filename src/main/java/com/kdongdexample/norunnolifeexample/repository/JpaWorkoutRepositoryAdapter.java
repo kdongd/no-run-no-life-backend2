@@ -7,9 +7,11 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,32 +47,18 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository {
 
     @Override
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        boolean hasType = type != null;
-        boolean hasFrom = from != null;
-        boolean hasTo = to != null;
+        return jpaWorkoutRepository.findAll(buildSpecification(type, from, to), pageable);
+    }
 
-        if (hasType && hasFrom && hasTo) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBetween(type, from, to, pageable);
-        }
-        if (hasType && hasFrom) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeAfter(type, from, pageable);
-        }
-        if (hasType && hasTo) {
-            return jpaWorkoutRepository.findByTypeAndWorkoutDateTimeBefore(type, to, pageable);
-        }
-        if (hasType) {
-            return jpaWorkoutRepository.findByType(type, pageable);
-        }
-        if (hasFrom && hasTo) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeBetween(from, to, pageable);
-        }
-        if (hasFrom) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeAfter(from, pageable);
-        }
-        if (hasTo) {
-            return jpaWorkoutRepository.findByWorkoutDateTimeBefore(to, pageable);
-        }
-        return jpaWorkoutRepository.findAll(pageable);
+    private Specification<Workout> buildSpecification(WorkoutType type, LocalDateTime from, LocalDateTime to) {
+        List<Specification<Workout>> specs = new ArrayList<>();
+        if (type != null) specs.add(WorkoutSpecifications.hasType(type));
+        if (from != null) specs.add(WorkoutSpecifications.fromDate(from));
+        if (to != null) specs.add(WorkoutSpecifications.toDate(to));
+
+        return specs.stream()
+                .reduce(Specification::and)
+                .orElse((root, query, cb) -> cb.conjunction());
     }
 
     @Override

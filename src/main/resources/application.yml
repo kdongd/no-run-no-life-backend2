@@ -11,3 +11,7 @@ spring:
   h2:
     console:
       enabled: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100
