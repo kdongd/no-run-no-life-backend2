@@ -3,11 +3,16 @@ package com.kdongdexample.norunnolifeexample.repository;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -74,5 +79,69 @@ class WorkoutRepositoryTest {
             jpaWorkoutRepository.save(workout);
             jpaWorkoutRepository.flush();
         }).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("from과 정확히 같은 시각의 기록도 검색 결과에 포함된다")
+    void search_fromBoundary_inclusive() {
+        LocalDateTime boundary = LocalDateTime.of(2026, 5, 1, 0, 0);
+        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "경계", boundary);
+        jpaWorkoutRepository.save(workout);
+
+        Specification<Workout> spec = WorkoutSpecifications.fromDate(boundary);
+        Page<Workout> result = jpaWorkoutRepository.findAll(spec, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("to와 정확히 같은 시각의 기록도 검색 결과에 포함된다")
+    void search_toBoundary_inclusive() {
+        LocalDateTime boundary = LocalDateTime.of(2026, 5, 31, 23, 59);
+        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "경계", boundary);
+        jpaWorkoutRepository.save(workout);
+
+        Specification<Workout> spec = WorkoutSpecifications.toDate(boundary);
+        Page<Workout> result = jpaWorkoutRepository.findAll(spec, PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("durationMinutes가 전부 null이어도 statsByType의 합계는 0으로 반환된다")
+    void statsByType_allNullDuration_returnsZero() {
+        Workout workout = Workout.create(WorkoutType.BOXING, null, "메모", LocalDateTime.now());
+        jpaWorkoutRepository.save(workout);
+
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType();
+
+        WorkoutStatByType boxingStat = stats.stream()
+                .filter(s -> s.type() == WorkoutType.BOXING)
+                .findFirst()
+                .orElseThrow();
+        assertThat(boxingStat.totalDurationMinutes()).isEqualTo(0L);
+        assertThat(boxingStat.count()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("statsByMonth는 년/월별로 올바르게 집계된다")
+    void statsByMonth_aggregatesByYearMonth() {
+        jpaWorkoutRepository.save(Workout.create(WorkoutType.RUNNING, 30, "1", LocalDateTime.of(2026, 5, 10, 9, 0)));
+        jpaWorkoutRepository.save(Workout.create(WorkoutType.RUNNING, 30, "2", LocalDateTime.of(2026, 5, 20, 9, 0)));
+        jpaWorkoutRepository.save(Workout.create(WorkoutType.BOXING, 60, "3", LocalDateTime.of(2026, 6, 1, 9, 0)));
+
+        List<WorkoutMonthlyStat> stats = jpaWorkoutRepository.statsByMonth();
+
+        WorkoutMonthlyStat may = stats.stream()
+                .filter(s -> s.year() == 2026 && s.month() == 5)
+                .findFirst()
+                .orElseThrow();
+        assertThat(may.count()).isEqualTo(2L);
+
+        WorkoutMonthlyStat june = stats.stream()
+                .filter(s -> s.year() == 2026 && s.month() == 6)
+                .findFirst()
+                .orElseThrow();
+        assertThat(june.count()).isEqualTo(1L);
     }
 }
