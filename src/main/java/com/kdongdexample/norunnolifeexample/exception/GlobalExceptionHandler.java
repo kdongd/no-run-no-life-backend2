@@ -46,4 +46,10 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(400, e.getMessage(), List.of());
         return ResponseEntity.badRequest().body(response);
     }
+
+    @ExceptionHandler(InvalidSortPropertyException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSortProperty(InvalidSortPropertyException e) {
+        ErrorResponse response = new ErrorResponse(400, e.getMessage(), List.of());
+        return ResponseEntity.badRequest().body(response);
+    }
 }
