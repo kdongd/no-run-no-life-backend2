@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,7 +41,8 @@ class WorkoutControllerTest {
     @DisplayName("GET /workouts 전체 목록을 조회할 수 있다")
     void getWorkouts() throws Exception {
         Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", LocalDateTime.now());
-        given(service.findAll()).willReturn(List.of(workout));
+        given(service.search(any(), any(), any(), any()))
+                .willReturn(new PageImpl<>(List.of(workout)));
 
         mockMvc.perform(get("/workouts"))
                 .andExpect(status().isOk());
@@ -96,7 +98,6 @@ class WorkoutControllerTest {
                 .andExpect(status().isNoContent());
     }
 
-    // 클래스 내부 추가
     @Test
     @DisplayName("GET /workouts/{id} details가 있어도 순환참조 없이 정상 직렬화된다")
     void getWorkout_withDetails_noCircularReference() throws Exception {
@@ -116,7 +117,7 @@ class WorkoutControllerTest {
     @DisplayName("details 내부 값이 검증 실패하면 400을 반환한다")
     void createWorkout_detailsValidationFail() throws Exception {
         List<WorkoutDetailForm> invalidDetails = List.of(
-                new WorkoutDetailForm(null, null, null, null)  // sequence, label, durationSeconds 다 null
+                new WorkoutDetailForm(null, null, null, null)
         );
         WorkoutForm form = new WorkoutForm(WorkoutType.BOXING, 60, "메모", LocalDateTime.now(), invalidDetails);
 

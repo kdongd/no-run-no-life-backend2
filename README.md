@@ -6,13 +6,13 @@
 - Spring MVC, JPA를 단계별로 적용하며 처음부터 직접 만들어가는 프로젝트
 ---
 ## 🛠 기술 스택
-| 분류 | 기술 |
-|------|------|
-| Language | Java 21 |
-| Framework | Spring Boot 3.5 |
-| API | REST API |
-| Build | Gradle |
-| DB | H2 (In-Memory) |
+| 분류 | 기술                          |
+|------|-----------------------------|
+| Language | Java 17                     |
+| Framework | Spring Boot 3.5             |
+| API | REST API                    |
+| Build | Gradle                      |
+| DB | H2 (In-Memory)              |
 | ORM | Spring Data JPA / Hibernate |
 ---
 ## ⚙️ 실행 방법
