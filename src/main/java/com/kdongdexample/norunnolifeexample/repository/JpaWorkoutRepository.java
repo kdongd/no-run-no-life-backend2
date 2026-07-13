@@ -25,10 +25,10 @@ public interface JpaWorkoutRepository extends JpaRepository<Workout, Long>, JpaS
     List<WorkoutStatByType> statsByType();
 
     @Query("select new com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat(" +
-            "cast(function('YEAR', w.workoutDateTime) as integer), " +
-            "cast(function('MONTH', w.workoutDateTime) as integer), " +
+            "extract(year from w.workoutDateTime), " +
+            "extract(month from w.workoutDateTime), " +
             "count(w)) " +
-            "from Workout w group by function('YEAR', w.workoutDateTime), function('MONTH', w.workoutDateTime) " +
-            "order by function('YEAR', w.workoutDateTime), function('MONTH', w.workoutDateTime)")
+            "from Workout w group by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime) " +
+            "order by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime)")
     List<WorkoutMonthlyStat> statsByMonth();
 }
