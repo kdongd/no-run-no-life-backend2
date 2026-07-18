@@ -25,6 +25,8 @@ H2 콘솔: `http://localhost:8080/h2-console`
 ## 📁 프로젝트 구조
 
     src/main/java/com/kdongdexample/norunnolifeexample
+    ├── config
+    │   └── WebConfig.java
     ├── controller
     │   └── WorkoutController.java
     ├── domain
@@ -70,7 +72,8 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - `@RestController`로 JSON 응답
 - `@Valid`로 요청 데이터 검증
 - `ResponseEntity`로 HTTP 상태코드 명시적 제어 (등록 201, 조회 200)
-- `@CrossOrigin`으로 프론트엔드 CORS 허용 (origin은 `application.yml`의 `cors.allowed-origins`로 설정화)
+- CORS는 `WebConfig`(`WebMvcConfigurer`)에서 전역으로 처리, origin은 `application.yml`의 `cors.allowed-origins`로 설정화
+  (`@CrossOrigin` 어노테이션 속성에서는 SpEL 기반 동적 분리가 실제로 동작하지 않는 것을 확인하여 이 방식으로 변경)
 - 목록 조회는 `type`, `from`, `to`, `Pageable` 파라미터를 받아 검색·페이징 처리
 
 ### 2) Domain
@@ -148,6 +151,7 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - DB 집계 기반 통계 API (타입별 / 월별), null 합계 방어 및 DB 방언 이식성 확보
 
 ---
+
 ## 🔧 settings.gradle 누락
 
 `settings.gradle`은 PR #1(1-3주차, 최초 구현)부터 지금까지 커밋 이력에 없었습니다. 프로젝트 폴더가 iCloud 동기화 폴더로 옮겨졌다가 복구한 적이 있어서 그때 유실됐나 싶었는데, PR #1의 최초 커밋부터 이미 없었던 걸로 봐서 그보다는 애초에 생성을 안 했다고 생각합니다.

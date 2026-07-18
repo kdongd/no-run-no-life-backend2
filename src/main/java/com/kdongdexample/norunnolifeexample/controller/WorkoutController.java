@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@CrossOrigin(origins = "#{'${cors.allowed-origins}'.split(',')}")
 public class WorkoutController {
     private final WorkoutService service;
 
