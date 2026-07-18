@@ -1,6 +1,5 @@
 package com.kdongdexample.norunnolifeexample.exception;
 
-import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,12 +26,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWorkoutNotFoundException(WorkoutNotFoundException e) {
         ErrorResponse response = new ErrorResponse(HttpStatus.NOT_FOUND.value(), e.getMessage(), List.of());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
-    }
-
-    @ExceptionHandler(PropertyReferenceException.class)
-    public ResponseEntity<ErrorResponse> handlePropertyReference(PropertyReferenceException e) {
-        ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), "정렬 필드가 올바르지 않습니다: " + e.getPropertyName(), List.of());
-        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
