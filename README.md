@@ -116,7 +116,6 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - `@RestControllerAdvice`로 전역 예외 처리
 - `WorkoutNotFoundException` → 404
 - `MethodArgumentNotValidException` → 400 + 필드별 에러 메시지
-- `PropertyReferenceException` → 400 (정렬 필드가 엔티티에 존재하지 않을 때)
 - `MethodArgumentTypeMismatchException` → 400 (요청 파라미터 타입 오류)
 - `InvalidSortPropertyException` → 400 (화이트리스트에 없는 정렬 필드 요청)
 ---
@@ -147,3 +146,23 @@ H2 콘솔: `http://localhost:8080/h2-console`
 - 정렬 필드 화이트리스트 검증
 - 페이징 처리 (목록 응답에서 details 제외, 상한 100건 자동 조정)
 - DB 집계 기반 통계 API (타입별 / 월별), null 합계 방어 및 DB 방언 이식성 확보
+
+---
+## 🔧 settings.gradle 누락
+
+`settings.gradle`은 PR #1(1-3주차, 최초 구현)부터 지금까지 커밋 이력에 없었습니다. 프로젝트 폴더가 iCloud 동기화 폴더로 옮겨졌다가 복구한 적이 있어서 그때 유실됐나 싶었는데, PR #1의 최초 커밋부터 이미 없었던 걸로 봐서 그보다는 애초에 생성을 안 했다고 생각합니다.
+
+말씀하신 대로 새 폴더에 다른 이름(`test-name-check`)으로 클론해서 `./gradlew build` 해봤는데, `rootProject.name`이 `norunnolifeexample`이 아니라 클론 디렉터리명인 `test-name-check`로 잡혔습니다. `settings.gradle`이 없으면 Gradle이 루트 디렉터리 이름으로 프로젝트명을 자동 추론한다는 걸 직접 확인했습니다.
+
+`settings.gradle`을 다시 추가하는 과정에서 로컬 환경 문제를 하나 더 발견했습니다. 추가 후 빌드가 `Unsupported class file major version 68`로 실패했는데, 확인해보니 시스템 기본 `java`가 어느샌가 24로 바뀌어 있었고 Gradle 8.10은 Java 23까지만 지원해서 생긴 문제였습니다. `gradle.properties`에 `org.gradle.java.home`을 JDK 17 경로로 지정해서 고정했는데, 이 경로가 제 로컬 절대경로라 커밋하면 다른 환경에서 깨질 걸 뒤늦게 알아차려서 `.gitignore`로 옮겼습니다.
+
+`settings.gradle`은 다시 추가해서 `rootProject.name = 'norunnolifeexample'`로 고정했습니다(`application.yml`의 `spring.application.name`과 동일하게 맞췄습니다). 깨끗한 폴더에 새로 클론해서 `settings.gradle`은 있고 `gradle.properties`는 없는 것까지 확인했습니다. 푸시 완료했습니다.
+
+---
+
+## 솔직 리뷰
+
+ - 일단 리뷰해주신 것들을 먼저 생각해보고 어떤 방법으로 접근할지에 대해서 고민을 합니다.
+ - 근데 아직 기본 이론이 부족한지 스스로의 해결방법으로 해결 한 것은 별로 없었습니다.
+ - 대부분 AI나 검색 위주로 해결방안을 얻고 이해하기까지 공부한 뒤 코드 수정을 했습니다.
+ - 그리고 이런 방식으로 해결하고나서 다음에 같은 문제가 있을때는 꼭 적용해볼려고 합니다. 
