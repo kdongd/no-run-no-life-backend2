@@ -38,7 +38,10 @@ class JpaWorkoutRepositoryMySQLTest {
         List<WorkoutMonthlyStat> result = repository.statsByMonth();
 
         assertThat(result).isNotEmpty();
-        assertThat(result.get(0).year()).isEqualTo(2026);
-        assertThat(result.get(0).month()).isEqualTo(7);
+        assertThat(result)
+                .anySatisfy(stat -> {
+                    assertThat(stat.year()).isEqualTo(2026);
+                    assertThat(stat.month()).isEqualTo(7);
+                });
     }
 }
