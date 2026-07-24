@@ -3,7 +3,8 @@ package com.kdongdexample.norunnolifeexample.repository;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -18,11 +19,6 @@ public class MemoryWorkoutRepository implements WorkoutRepository {
         Workout saved = Workout.withId(id, workout);
         store.put(id, saved);
         return saved;
-    }
-
-    @Override
-    public List<Workout> findAll() {
-        return new ArrayList<>(store.values());
     }
 
     @Override
