@@ -52,6 +52,16 @@ public abstract class Workout {
         detail.assignWorkout(this);
     }
 
+    public void clearDetails() {
+        details.clear();
+    }
+
+    protected void updateCommon(Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+        this.durationMinutes = durationMinutes;
+        this.memo = memo;
+        this.workoutDateTime = workoutDateTime;
+    }
+
     void assignId(Long id) {
         this.id = id;
     }

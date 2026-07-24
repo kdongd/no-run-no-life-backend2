@@ -9,8 +9,10 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutUpdateForm;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
+import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.springframework.data.domain.Page;
@@ -68,6 +70,33 @@ public class WorkoutService {
     public void delete(Long id) {
         Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
         repository.delete(workout);
+    }
+
+    @Transactional
+    public Workout update(Long id, WorkoutUpdateForm form) {
+        Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+
+        if (workout.getType() != form.type()) {
+            throw new WorkoutTypeMismatchException(workout.getType(), form.type());
+        }
+
+        if (workout instanceof RunningWorkout running) {
+            running.update(form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.distanceKm(), form.place(), form.caloriesBurned());
+        } else if (workout instanceof BoxingWorkout boxing) {
+            boxing.update(form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.rounds(), form.sparringPartner(), form.techniqueType());
+        }
+
+        workout.clearDetails();
+        if (form.details() != null) {
+            for (WorkoutDetailForm detailForm : form.details()) {
+                WorkoutDetail detail = WorkoutDetail.create(workout, detailForm.sequence(), detailForm.label(), detailForm.durationSeconds(), detailForm.note());
+                workout.addDetail(detail);
+            }
+        }
+
+        return workout;
     }
 
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {

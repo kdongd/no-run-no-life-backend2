@@ -34,4 +34,12 @@ public class BoxingWorkout extends Workout {
                                        Integer rounds, String sparringPartner, TechniqueType techniqueType) {
         return new BoxingWorkout(durationMinutes, memo, workoutDateTime, rounds, sparringPartner, techniqueType);
     }
+
+    public void update(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+                       Integer rounds, String sparringPartner, TechniqueType techniqueType) {
+        updateCommon(durationMinutes, memo, workoutDateTime);
+        this.rounds = rounds;
+        this.sparringPartner = sparringPartner;
+        this.techniqueType = techniqueType;
+    }
 }

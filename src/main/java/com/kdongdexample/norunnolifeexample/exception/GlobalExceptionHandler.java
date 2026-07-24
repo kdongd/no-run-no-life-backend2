@@ -39,4 +39,10 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), e.getMessage(), List.of());
         return ResponseEntity.badRequest().body(response);
     }
+
+    @ExceptionHandler(WorkoutTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleWorkoutTypeMismatch(WorkoutTypeMismatchException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), e.getMessage(), List.of());
+        return ResponseEntity.badRequest().body(response);
+    }
 }

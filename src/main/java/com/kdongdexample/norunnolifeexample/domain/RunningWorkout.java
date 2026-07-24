@@ -30,4 +30,12 @@ public class RunningWorkout extends Workout {
                                         Double distanceKm, String place, Integer caloriesBurned) {
         return new RunningWorkout(durationMinutes, memo, workoutDateTime, distanceKm, place, caloriesBurned);
     }
+
+    public void update(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+                       Double distanceKm, String place, Integer caloriesBurned) {
+        updateCommon(durationMinutes, memo, workoutDateTime);
+        this.distanceKm = distanceKm;
+        this.place = place;
+        this.caloriesBurned = caloriesBurned;
+    }
 }

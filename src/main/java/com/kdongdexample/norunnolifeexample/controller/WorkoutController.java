@@ -7,6 +7,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutResponse;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutSummaryResponse;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutUpdateForm;
 import com.kdongdexample.norunnolifeexample.service.WorkoutService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -50,6 +51,12 @@ public class WorkoutController {
     @GetMapping("/workouts/{id}")
     public ResponseEntity<WorkoutResponse> getWorkout(@PathVariable Long id) {
         return ResponseEntity.ok(WorkoutResponse.from(service.findById(id)));
+    }
+
+    @PutMapping("/workouts/{id}")
+    public ResponseEntity<WorkoutResponse> updateWorkout(@PathVariable Long id, @Valid @RequestBody WorkoutUpdateForm form) {
+        Workout updated = service.update(id, form);
+        return ResponseEntity.ok(WorkoutResponse.from(updated));
     }
 
     @DeleteMapping("/workouts/{id}")
