@@ -1,12 +1,17 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -42,7 +47,38 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
 
     @Override
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        return jpaWorkoutRepository.findAll(buildSpecification(type, from, to), pageable);
+        Specification<Workout> spec = buildSpecification(type, from, to);
+
+        if (pageable.getSort().isSorted()) {
+            spec = spec.and(buildSortSpecification(pageable.getSort()));
+            Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return jpaWorkoutRepository.findAll(spec, unsortedPageable);
+        }
+
+        return jpaWorkoutRepository.findAll(spec, pageable);
+    }
+
+    private Specification<Workout> buildSortSpecification(Sort sort) {
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
+
+            for (Sort.Order order : sort) {
+                Path<?> path = switch (order.getProperty()) {
+                    case "distanceKm" -> cb.treat(root, RunningWorkout.class).get("distanceKm");
+                    default -> root.get(order.getProperty());
+                };
+
+                Expression<Integer> nullsLastKey = cb.<Integer>selectCase()
+                        .when(cb.isNull(path), 1)
+                        .otherwise(0);
+
+                orders.add(cb.asc(nullsLastKey));
+                orders.add(order.isAscending() ? cb.asc(path) : cb.desc(path));
+            }
+
+            query.orderBy(orders);
+            return cb.conjunction();
+        };
     }
 
     private Specification<Workout> buildSpecification(WorkoutType type, LocalDateTime from, LocalDateTime to) {

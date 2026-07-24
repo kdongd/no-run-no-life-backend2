@@ -28,7 +28,8 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class WorkoutService {
 
-    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of("workoutDateTime", "durationMinutes", "type");
+    private static final Set<String> ALLOWED_SORT_PROPERTIES =
+            Set.of("workoutDateTime", "durationMinutes", "type", "distanceKm");
 
     private final WorkoutRepository repository;
     private final WorkoutQueryRepository queryRepository;
