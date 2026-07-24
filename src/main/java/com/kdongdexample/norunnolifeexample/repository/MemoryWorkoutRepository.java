@@ -1,6 +1,7 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
+import com.kdongdexample.norunnolifeexample.domain.WorkoutIdAssigner;
 import org.springframework.stereotype.Repository;
 
 import java.util.Map;
@@ -16,9 +17,9 @@ public class MemoryWorkoutRepository implements WorkoutRepository {
     @Override
     public Workout save(Workout workout) {
         Long id = sequence.incrementAndGet();
-        Workout saved = Workout.withId(id, workout);
-        store.put(id, saved);
-        return saved;
+        WorkoutIdAssigner.assign(workout, id);
+        store.put(id, workout);
+        return workout;
     }
 
     @Override

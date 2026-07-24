@@ -1,5 +1,7 @@
 package com.kdongdexample.norunnolifeexample.service;
 
+import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
@@ -38,7 +40,14 @@ public class WorkoutService {
 
     @Transactional
     public Workout save(WorkoutForm form) {
-        Workout workout = Workout.create(form.type(), form.durationMinutes(), form.memo(), form.workoutDateTime());
+        Workout workout = switch (form.type()) {
+            case RUNNING -> RunningWorkout.create(
+                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.distanceKm(), form.place(), form.caloriesBurned());
+            case BOXING -> BoxingWorkout.create(
+                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.rounds(), form.sparringPartner(), form.techniqueType());
+        };
 
         if (form.details() != null) {
             for (WorkoutDetailForm detailForm : form.details()) {

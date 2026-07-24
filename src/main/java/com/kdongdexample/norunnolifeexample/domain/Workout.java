@@ -41,4 +41,8 @@ public abstract class Workout {
         details.add(detail);
         detail.assignWorkout(this);
     }
+
+    void assignId(Long id) {
+        this.id = id;
+    }
 }
