@@ -3,18 +3,18 @@ package com.kdongdexample.norunnolifeexample.domain;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.NoArgsConstructor;
-
-
 @Getter
 @Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Workout {
+public abstract class Workout {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,33 +30,15 @@ public class Workout {
     @OneToMany(mappedBy = "workout", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutDetail> details = new ArrayList<>();
 
-    public static Workout create(WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
-        Workout workout = new Workout();
-        workout.type = type;
-        workout.durationMinutes = durationMinutes;
-        workout.memo = memo;
-        workout.workoutDateTime = workoutDateTime;
-        return workout;
-    }
-
-    public static Workout withId(Long id, Workout workout) {
-        Workout saved = new Workout();
-        saved.id = id;
-        saved.type = workout.type;
-        saved.durationMinutes = workout.durationMinutes;
-        saved.memo = workout.memo;
-        saved.workoutDateTime = workout.workoutDateTime;
-
-        for (WorkoutDetail detail : workout.details) {
-            saved.addDetail(detail);
-        }
-
-        return saved;
+    protected Workout(WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+        this.type = type;
+        this.durationMinutes = durationMinutes;
+        this.memo = memo;
+        this.workoutDateTime = workoutDateTime;
     }
 
     public void addDetail(WorkoutDetail detail) {
         details.add(detail);
         detail.assignWorkout(this);
     }
-
 }
