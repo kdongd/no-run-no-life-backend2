@@ -61,8 +61,4 @@ public abstract class Workout {
         this.memo = memo;
         this.workoutDateTime = workoutDateTime;
     }
-
-    void assignId(Long id) {
-        this.id = id;
-    }
 }
