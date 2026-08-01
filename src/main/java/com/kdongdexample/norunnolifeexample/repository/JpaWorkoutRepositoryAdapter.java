@@ -74,11 +74,13 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
                     default -> root.get(order.getProperty());
                 };
 
-                Expression<Integer> nullsLastKey = cb.<Integer>selectCase()
-                        .when(cb.isNull(path), 1)
-                        .otherwise(0);
+                if (order.getProperty().equals("distanceKm")) {
+                    Expression<Integer> nullsLastKey = cb.<Integer>selectCase()
+                            .when(cb.isNull(path), 1)
+                            .otherwise(0);
+                    orders.add(cb.asc(nullsLastKey));
+                }
 
-                orders.add(cb.asc(nullsLastKey));
                 orders.add(order.isAscending() ? cb.asc(path) : cb.desc(path));
             }
 
