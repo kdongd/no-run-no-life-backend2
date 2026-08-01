@@ -19,10 +19,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @Primary
 public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQueryRepository {
+
+    private static final Set<String> SUBCLASS_SORT_PROPERTIES = Set.of("distanceKm");
 
     private final JpaWorkoutRepository jpaWorkoutRepository;
 
@@ -49,7 +52,10 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
         Specification<Workout> spec = buildSpecification(type, from, to);
 
-        if (pageable.getSort().isSorted()) {
+        boolean needsCustomSort = pageable.getSort().stream()
+                .anyMatch(order -> SUBCLASS_SORT_PROPERTIES.contains(order.getProperty()));
+
+        if (needsCustomSort) {
             spec = spec.and(buildSortSpecification(pageable.getSort()));
             Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
             return jpaWorkoutRepository.findAll(spec, unsortedPageable);
