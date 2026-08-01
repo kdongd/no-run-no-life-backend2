@@ -43,4 +43,16 @@ public record WorkoutUpdateForm(
     public boolean isRoundsValidForBoxing() {
         return type != WorkoutType.BOXING || rounds != null;
     }
+
+    @AssertTrue(message = "복싱 기록에는 distanceKm/place/caloriesBurned를 보낼 수 없습니다")
+    public boolean isNoRunningFieldsForBoxing() {
+        return type != WorkoutType.BOXING
+                || (distanceKm == null && place == null && caloriesBurned == null);
+    }
+
+    @AssertTrue(message = "러닝 기록에는 rounds/sparringPartner/techniqueType을 보낼 수 없습니다")
+    public boolean isNoBoxingFieldsForRunning() {
+        return type != WorkoutType.RUNNING
+                || (rounds == null && sparringPartner == null && techniqueType == null);
+    }
 }
