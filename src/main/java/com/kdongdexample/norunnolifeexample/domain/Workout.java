@@ -35,6 +35,7 @@ public abstract class Workout {
     private List<WorkoutDetail> details = new ArrayList<>();
 
     @CreatedDate
+    @Column(updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate

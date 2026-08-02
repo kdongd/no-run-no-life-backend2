@@ -13,6 +13,8 @@ public record WorkoutResponse(
         Integer durationMinutes,
         String memo,
         LocalDateTime workoutDateTime,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
         List<WorkoutDetailResponse> details,
 
         // 러닝 전용
@@ -34,6 +36,8 @@ public record WorkoutResponse(
                 workout.getDurationMinutes(),
                 workout.getMemo(),
                 workout.getWorkoutDateTime(),
+                workout.getCreatedAt(),
+                workout.getUpdatedAt(),
                 workout.getDetails().stream()
                         .map(WorkoutDetailResponse::from)
                         .toList(),

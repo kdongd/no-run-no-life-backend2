@@ -1,7 +1,6 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
-import com.kdongdexample.norunnolifeexample.domain.Workout;
-import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +28,9 @@ class JpaWorkoutRepositoryMySQLTest {
 
     @Test
     void statsByMonth_shouldExtractYearAndMonth_onMySQL() {
-        Workout workout = Workout.create(
-                WorkoutType.RUNNING, 30, "MySQL 테스트",
-                LocalDateTime.of(2026, 7, 16, 10, 0)
+        RunningWorkout workout = RunningWorkout.create(
+                30, "MySQL 테스트", LocalDateTime.of(2026, 7, 16, 10, 0),
+                5.0, "한강", 300
         );
         repository.save(workout);
 

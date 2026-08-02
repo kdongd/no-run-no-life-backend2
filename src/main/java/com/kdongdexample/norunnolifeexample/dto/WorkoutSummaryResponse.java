@@ -12,6 +12,8 @@ public record WorkoutSummaryResponse(
         Integer durationMinutes,
         String memo,
         LocalDateTime workoutDateTime,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
 
         // 러닝 전용
         Double distanceKm,
@@ -32,6 +34,8 @@ public record WorkoutSummaryResponse(
                 workout.getDurationMinutes(),
                 workout.getMemo(),
                 workout.getWorkoutDateTime(),
+                workout.getCreatedAt(),
+                workout.getUpdatedAt(),
                 typeFields.distanceKm(),
                 typeFields.place(),
                 typeFields.caloriesBurned(),

@@ -1,13 +1,18 @@
 package com.kdongdexample.norunnolifeexample.service;
 
+import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
+import com.kdongdexample.norunnolifeexample.domain.TechniqueType;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import com.kdongdexample.norunnolifeexample.dto.WorkoutUpdateForm;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
+import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -49,8 +54,11 @@ class WorkoutServiceTest {
     @Test
     @DisplayName("운동 기록 저장 후 반환")
     void save() {
-        WorkoutForm form = new WorkoutForm(WorkoutType.RUNNING, 30, "테스트 메모", now, null);
-        Workout saved = Workout.create(WorkoutType.RUNNING, 30, "테스트 메모", now);
+        WorkoutForm form = new WorkoutForm(
+                WorkoutType.RUNNING, 30, "테스트 메모", now, null,
+                5.0, "한강", 300,
+                null, null, null);
+        RunningWorkout saved = RunningWorkout.create(30, "테스트 메모", now, 5.0, "한강", 300);
         given(repository.save(any())).willReturn(saved);
 
         Workout result = service().save(form);
@@ -66,8 +74,11 @@ class WorkoutServiceTest {
         List<WorkoutDetailForm> details = List.of(
                 new WorkoutDetailForm(1, "1라운드", 180, "섀도우")
         );
-        WorkoutForm form = new WorkoutForm(WorkoutType.BOXING, 60, "메모", now, details);
-        Workout saved = Workout.create(WorkoutType.BOXING, 60, "메모", now);
+        WorkoutForm form = new WorkoutForm(
+                WorkoutType.BOXING, 60, "메모", now, details,
+                null, null, null,
+                3, "파트너", TechniqueType.SPARRING);
+        BoxingWorkout saved = BoxingWorkout.create(60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
         given(repository.save(any())).willReturn(saved);
 
         Workout result = service().save(form);
@@ -78,7 +89,7 @@ class WorkoutServiceTest {
     @Test
     @DisplayName("존재하는 id 조회 성공")
     void findById_success() {
-        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", now);
+        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(workout));
 
         Workout result = service().findById(1L);
@@ -107,7 +118,7 @@ class WorkoutServiceTest {
     @Test
     @DisplayName("존재하는 id 삭제 성공")
     void delete_success() {
-        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", now);
+        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(workout));
 
         assertThatCode(() -> service().delete(1L))
@@ -115,10 +126,82 @@ class WorkoutServiceTest {
     }
 
     @Test
+    @DisplayName("존재하지 않는 id 수정 시 WorkoutNotFoundException 발생")
+    void update_notFound() {
+        given(repository.findById(999L)).willReturn(Optional.empty());
+        WorkoutUpdateForm form = new WorkoutUpdateForm(
+                WorkoutType.RUNNING, 30, "메모", now, null,
+                5.0, "한강", 300,
+                null, null, null);
+
+        assertThatThrownBy(() -> service().update(999L, form))
+                .isInstanceOf(WorkoutNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("기존 타입과 다른 타입으로 수정 요청 시 WorkoutTypeMismatchException 발생")
+    void update_typeMismatch_throwsException() {
+        RunningWorkout existing = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(existing));
+
+        WorkoutUpdateForm form = new WorkoutUpdateForm(
+                WorkoutType.BOXING, 60, "메모", now, null,
+                null, null, null,
+                3, "파트너", TechniqueType.SPARRING);
+
+        assertThatThrownBy(() -> service().update(1L, form))
+                .isInstanceOf(WorkoutTypeMismatchException.class);
+    }
+
+    @Test
+    @DisplayName("같은 타입으로 수정하면 필드가 갱신되고 저장된 엔티티를 반환한다")
+    void update_success() {
+        RunningWorkout existing = RunningWorkout.create(30, "이전 메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(existing));
+
+        WorkoutUpdateForm form = new WorkoutUpdateForm(
+                WorkoutType.RUNNING, 60, "수정된 메모", now, null,
+                10.0, "남산", 500,
+                null, null, null);
+
+        Workout result = service().update(1L, form);
+
+        assertThat(result.getDurationMinutes()).isEqualTo(60);
+        assertThat(result.getMemo()).isEqualTo("수정된 메모");
+        assertThat(((RunningWorkout) result).getDistanceKm()).isEqualTo(10.0);
+        assertThat(((RunningWorkout) result).getPlace()).isEqualTo("남산");
+    }
+
+    @Test
+    @DisplayName("수정 시 details가 통째로 교체된다")
+    void update_replacesDetails() {
+        BoxingWorkout existing = BoxingWorkout.create(60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
+        WorkoutDetailForm oldDetailForm = new WorkoutDetailForm(1, "기존 라운드", 180, null);
+        existing.addDetail(
+                com.kdongdexample.norunnolifeexample.domain.WorkoutDetail.create(
+                        existing, oldDetailForm.sequence(), oldDetailForm.label(),
+                        oldDetailForm.durationSeconds(), oldDetailForm.note()));
+        given(repository.findById(1L)).willReturn(Optional.of(existing));
+
+        List<WorkoutDetailForm> newDetails = List.of(
+                new WorkoutDetailForm(1, "새 라운드", 200, "미트")
+        );
+        WorkoutUpdateForm form = new WorkoutUpdateForm(
+                WorkoutType.BOXING, 60, "메모", now, newDetails,
+                null, null, null,
+                3, "파트너", TechniqueType.SPARRING);
+
+        Workout result = service().update(1L, form);
+
+        assertThat(result.getDetails()).hasSize(1);
+        assertThat(result.getDetails().get(0).getLabel()).isEqualTo("새 라운드");
+    }
+
+    @Test
     @DisplayName("허용된 정렬 필드로 검색하면 queryRepository.search()에 위임한다")
     void search_validSort_delegatesToQueryRepository() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("workoutDateTime"));
-        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", now);
+        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
         Page<Workout> page = new PageImpl<>(List.of(workout));
         given(queryRepository.search(WorkoutType.RUNNING, null, null, pageable)).willReturn(page);
 
