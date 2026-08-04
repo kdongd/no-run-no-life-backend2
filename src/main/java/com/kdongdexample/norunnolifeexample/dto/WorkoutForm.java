@@ -25,11 +25,14 @@ public record WorkoutForm(
         List<WorkoutDetailForm> details,
 
         // 러닝 전용
+        @Positive
         Double distanceKm,
         String place,
+        @Min(1)
         Integer caloriesBurned,
 
         // 복싱 전용
+        @Min(1)
         Integer rounds,
         String sparringPartner,
         TechniqueType techniqueType

@@ -9,7 +9,6 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
-import com.kdongdexample.norunnolifeexample.dto.WorkoutUpdateForm;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
