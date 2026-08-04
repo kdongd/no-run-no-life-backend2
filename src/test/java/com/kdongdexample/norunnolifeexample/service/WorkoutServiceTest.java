@@ -128,7 +128,7 @@ class WorkoutServiceTest {
     @DisplayName("존재하지 않는 id 수정 시 WorkoutNotFoundException 발생")
     void update_notFound() {
         given(repository.findById(999L)).willReturn(Optional.empty());
-        WorkoutUpdateForm form = new WorkoutUpdateForm(
+        WorkoutForm form = new WorkoutForm(
                 WorkoutType.RUNNING, 30, "메모", now, null,
                 5.0, "한강", 300,
                 null, null, null);
@@ -143,7 +143,7 @@ class WorkoutServiceTest {
         RunningWorkout existing = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(existing));
 
-        WorkoutUpdateForm form = new WorkoutUpdateForm(
+        WorkoutForm form = new WorkoutForm(
                 WorkoutType.BOXING, 60, "메모", now, null,
                 null, null, null,
                 3, "파트너", TechniqueType.SPARRING);
@@ -158,7 +158,7 @@ class WorkoutServiceTest {
         RunningWorkout existing = RunningWorkout.create(30, "이전 메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(existing));
 
-        WorkoutUpdateForm form = new WorkoutUpdateForm(
+        WorkoutForm form = new WorkoutForm(
                 WorkoutType.RUNNING, 60, "수정된 메모", now, null,
                 10.0, "남산", 500,
                 null, null, null);
@@ -185,7 +185,7 @@ class WorkoutServiceTest {
         List<WorkoutDetailForm> newDetails = List.of(
                 new WorkoutDetailForm(1, "새 라운드", 200, "미트")
         );
-        WorkoutUpdateForm form = new WorkoutUpdateForm(
+        WorkoutForm form = new WorkoutForm(
                 WorkoutType.BOXING, 60, "메모", now, newDetails,
                 null, null, null,
                 3, "파트너", TechniqueType.SPARRING);
