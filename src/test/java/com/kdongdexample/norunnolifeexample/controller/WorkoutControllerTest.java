@@ -1,9 +1,11 @@
 package com.kdongdexample.norunnolifeexample.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
+import com.kdongdexample.norunnolifeexample.domain.TechniqueType;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
-import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
@@ -40,7 +42,7 @@ class WorkoutControllerTest {
     @Test
     @DisplayName("GET /workouts 전체 목록을 조회할 수 있다")
     void getWorkouts() throws Exception {
-        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", LocalDateTime.now());
+        RunningWorkout workout = RunningWorkout.create(30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
         given(service.search(any(), any(), any(), any()))
                 .willReturn(new PageImpl<>(List.of(workout)));
 
@@ -51,8 +53,14 @@ class WorkoutControllerTest {
     @Test
     @DisplayName("POST /workouts 운동 기록을 등록할 수 있다")
     void createWorkout() throws Exception {
-        WorkoutForm form = new WorkoutForm(WorkoutType.RUNNING, 30, "메모", LocalDateTime.now(), null);
-        Workout workout = Workout.create(form.type(), form.durationMinutes(), form.memo(), form.workoutDateTime());
+        WorkoutForm form = new WorkoutForm(
+                com.kdongdexample.norunnolifeexample.domain.WorkoutType.RUNNING,
+                30, "메모", LocalDateTime.now(), null,
+                5.0, "한강", 300,
+                null, null, null);
+        RunningWorkout workout = RunningWorkout.create(
+                form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                form.distanceKm(), form.place(), form.caloriesBurned());
         given(service.save(any())).willReturn(workout);
 
         mockMvc.perform(post("/workouts")
@@ -64,7 +72,40 @@ class WorkoutControllerTest {
     @Test
     @DisplayName("검증 실패 시 400을 반환한다")
     void createWorkout_validationFail() throws Exception {
-        WorkoutForm form = new WorkoutForm(null, null, null, null, null);
+        WorkoutForm form = new WorkoutForm(
+                null, null, null, null, null,
+                null, null, null,
+                null, null, null);
+
+        mockMvc.perform(post("/workouts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(form)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("복싱 타입인데 러닝 전용 필드(distanceKm)를 같이 보내면 400을 반환한다")
+    void createWorkout_boxingWithRunningFields_returns400() throws Exception {
+        WorkoutForm form = new WorkoutForm(
+                com.kdongdexample.norunnolifeexample.domain.WorkoutType.BOXING,
+                60, "메모", LocalDateTime.now(), null,
+                5.0, null, null,   // distanceKm이 섞여 들어옴
+                3, "파트너", TechniqueType.SPARRING);
+
+        mockMvc.perform(post("/workouts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(form)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("러닝 타입인데 복싱 전용 필드(rounds)를 같이 보내면 400을 반환한다")
+    void createWorkout_runningWithBoxingFields_returns400() throws Exception {
+        WorkoutForm form = new WorkoutForm(
+                com.kdongdexample.norunnolifeexample.domain.WorkoutType.RUNNING,
+                30, "메모", LocalDateTime.now(), null,
+                5.0, "한강", 300,
+                3, null, null);   // rounds가 섞여 들어옴
 
         mockMvc.perform(post("/workouts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -75,7 +116,7 @@ class WorkoutControllerTest {
     @Test
     @DisplayName("GET /workouts/{id} 단건 조회 성공")
     void getWorkout() throws Exception {
-        Workout workout = Workout.create(WorkoutType.RUNNING, 30, "메모", LocalDateTime.now());
+        RunningWorkout workout = RunningWorkout.create(30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
         given(service.findById(1L)).willReturn(workout);
 
         mockMvc.perform(get("/workouts/1"))
@@ -101,7 +142,7 @@ class WorkoutControllerTest {
     @Test
     @DisplayName("GET /workouts/{id} details가 있어도 순환참조 없이 정상 직렬화된다")
     void getWorkout_withDetails_noCircularReference() throws Exception {
-        Workout workout = Workout.create(WorkoutType.BOXING, 60, "스파링", LocalDateTime.now());
+        BoxingWorkout workout = BoxingWorkout.create(60, "스파링", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING);
         WorkoutDetail detail = WorkoutDetail.create(workout, 1, "1라운드", 180, "섀도우");
         workout.addDetail(detail);
         given(service.findById(1L)).willReturn(workout);
@@ -119,7 +160,11 @@ class WorkoutControllerTest {
         List<WorkoutDetailForm> invalidDetails = List.of(
                 new WorkoutDetailForm(null, null, null, null)
         );
-        WorkoutForm form = new WorkoutForm(WorkoutType.BOXING, 60, "메모", LocalDateTime.now(), invalidDetails);
+        WorkoutForm form = new WorkoutForm(
+                com.kdongdexample.norunnolifeexample.domain.WorkoutType.BOXING,
+                60, "메모", LocalDateTime.now(), invalidDetails,
+                null, null, null,
+                3, "파트너", TechniqueType.SPARRING);
 
         mockMvc.perform(post("/workouts")
                         .contentType(MediaType.APPLICATION_JSON)

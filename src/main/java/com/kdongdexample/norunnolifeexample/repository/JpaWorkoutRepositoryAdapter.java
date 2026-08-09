@@ -1,12 +1,17 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
@@ -14,10 +19,13 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @Primary
 public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQueryRepository {
+
+    private static final Set<String> SUBCLASS_SORT_PROPERTIES = Set.of("distanceKm");
 
     private final JpaWorkoutRepository jpaWorkoutRepository;
 
@@ -42,7 +50,50 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
 
     @Override
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        return jpaWorkoutRepository.findAll(buildSpecification(type, from, to), pageable);
+        Specification<Workout> spec = buildSpecification(type, from, to);
+
+        boolean needsCustomSort = pageable.getSort().stream()
+                .anyMatch(order -> SUBCLASS_SORT_PROPERTIES.contains(order.getProperty()));
+
+        if (needsCustomSort) {
+            spec = spec.and(buildSortSpecification(pageable.getSort()));
+            Pageable unsortedPageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+            return jpaWorkoutRepository.findAll(spec, unsortedPageable);
+        }
+
+        return jpaWorkoutRepository.findAll(spec, pageable);
+    }
+
+    private Specification<Workout> buildSortSpecification(Sort sort) {
+        return (root, query, cb) -> {
+            // count 쿼리(결과 타입이 Long)에는 정렬을 적용하지 않는다.
+            // query.orderBy()가 count 쿼리에도 호출되면 SQL이 깨지거나
+            // 결과가 왜곡될 수 있어(예: LIMIT과 무관하게 totalElements가 틀어짐).
+            if (Long.class.equals(query.getResultType())) {
+                return cb.conjunction();
+            }
+
+            List<jakarta.persistence.criteria.Order> orders = new ArrayList<>();
+
+            for (Sort.Order order : sort) {
+                Path<?> path = switch (order.getProperty()) {
+                    case "distanceKm" -> cb.treat(root, RunningWorkout.class).get("distanceKm");
+                    default -> root.get(order.getProperty());
+                };
+
+                if (order.getProperty().equals("distanceKm")) {
+                    Expression<Integer> nullsLastKey = cb.<Integer>selectCase()
+                            .when(cb.isNull(path), 1)
+                            .otherwise(0);
+                    orders.add(cb.asc(nullsLastKey));
+                }
+
+                orders.add(order.isAscending() ? cb.asc(path) : cb.desc(path));
+            }
+
+            query.orderBy(orders);
+            return cb.conjunction();
+        };
     }
 
     private Specification<Workout> buildSpecification(WorkoutType type, LocalDateTime from, LocalDateTime to) {

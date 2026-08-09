@@ -1,0 +1,75 @@
+package com.kdongdexample.norunnolifeexample.domain;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.jdbc.Sql;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import com.kdongdexample.norunnolifeexample.config.AuditingConfig;
+import jakarta.persistence.EntityManager;
+
+import java.time.LocalDateTime;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@Testcontainers
+@Import(AuditingConfig.class)
+class WorkoutAuditingTest {
+
+    @Container
+    @ServiceConnection
+    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0");
+
+    @Autowired
+    private EntityManager em;
+
+    @Test
+    @DisplayName("엔티티 저장 시 createdAt과 updatedAt이 자동으로 채워진다")
+    void createdAtAndUpdatedAtAreSetOnPersist() {
+        // given
+        RunningWorkout workout = RunningWorkout.create(
+                30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
+
+        // when
+        em.persist(workout);
+        em.flush();
+        em.clear();
+
+        // then
+        RunningWorkout found = em.find(RunningWorkout.class, workout.getId());
+        assertThat(found.getCreatedAt()).isNotNull();
+        assertThat(found.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("엔티티 수정 시 updatedAt만 갱신되고 createdAt은 유지된다")
+    void updatedAtChangesButCreatedAtStaysOnModify() {
+        // given
+        RunningWorkout workout = RunningWorkout.create(
+                30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
+        em.persist(workout);
+        em.flush();
+        em.clear();
+
+        RunningWorkout saved = em.find(RunningWorkout.class, workout.getId());
+        LocalDateTime originalCreatedAt = saved.getCreatedAt();
+        LocalDateTime originalUpdatedAt = saved.getUpdatedAt();
+
+        // when
+        saved.update(60, "수정된 메모", LocalDateTime.now(), 10.0, "남산", 500);
+        em.flush();
+        em.clear();
+
+        // then
+        RunningWorkout updated = em.find(RunningWorkout.class, workout.getId());
+        assertThat(updated.getCreatedAt()).isEqualTo(originalCreatedAt);
+        assertThat(updated.getUpdatedAt()).isNotEqualTo(originalUpdatedAt);
+    }
+}

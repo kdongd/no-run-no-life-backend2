@@ -52,6 +52,12 @@ public class WorkoutController {
         return ResponseEntity.ok(WorkoutResponse.from(service.findById(id)));
     }
 
+    @PutMapping("/workouts/{id}")
+    public ResponseEntity<WorkoutResponse> updateWorkout(@PathVariable Long id, @Valid @RequestBody WorkoutForm form) {
+        Workout updated = service.update(id, form);
+        return ResponseEntity.ok(WorkoutResponse.from(updated));
+    }
+
     @DeleteMapping("/workouts/{id}")
     public ResponseEntity<Void> deleteWorkout(@PathVariable Long id) {
         service.delete(id);

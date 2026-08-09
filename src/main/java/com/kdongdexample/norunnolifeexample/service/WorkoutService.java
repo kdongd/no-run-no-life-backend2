@@ -1,5 +1,7 @@
 package com.kdongdexample.norunnolifeexample.service;
 
+import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
+import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
@@ -9,6 +11,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
+import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.springframework.data.domain.Page;
@@ -26,7 +29,8 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class WorkoutService {
 
-    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of("workoutDateTime", "durationMinutes", "type");
+    private static final Set<String> ALLOWED_SORT_PROPERTIES =
+            Set.of("workoutDateTime", "durationMinutes", "type", "distanceKm");
 
     private final WorkoutRepository repository;
     private final WorkoutQueryRepository queryRepository;
@@ -38,7 +42,14 @@ public class WorkoutService {
 
     @Transactional
     public Workout save(WorkoutForm form) {
-        Workout workout = Workout.create(form.type(), form.durationMinutes(), form.memo(), form.workoutDateTime());
+        Workout workout = switch (form.type()) {
+            case RUNNING -> RunningWorkout.create(
+                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.distanceKm(), form.place(), form.caloriesBurned());
+            case BOXING -> BoxingWorkout.create(
+                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.rounds(), form.sparringPartner(), form.techniqueType());
+        };
 
         if (form.details() != null) {
             for (WorkoutDetailForm detailForm : form.details()) {
@@ -58,6 +69,33 @@ public class WorkoutService {
     public void delete(Long id) {
         Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
         repository.delete(workout);
+    }
+
+    @Transactional
+    public Workout update(Long id, WorkoutForm form) {
+        Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+
+        if (workout.getType() != form.type()) {
+            throw new WorkoutTypeMismatchException(workout.getType(), form.type());
+        }
+
+        if (workout instanceof RunningWorkout running) {
+            running.update(form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.distanceKm(), form.place(), form.caloriesBurned());
+        } else if (workout instanceof BoxingWorkout boxing) {
+            boxing.update(form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    form.rounds(), form.sparringPartner(), form.techniqueType());
+        }
+
+        workout.clearDetails();
+        if (form.details() != null) {
+            for (WorkoutDetailForm detailForm : form.details()) {
+                WorkoutDetail detail = WorkoutDetail.create(workout, detailForm.sequence(), detailForm.label(), detailForm.durationSeconds(), detailForm.note());
+                workout.addDetail(detail);
+            }
+        }
+
+        return workout;
     }
 
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {

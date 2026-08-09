@@ -3,18 +3,22 @@ package com.kdongdexample.norunnolifeexample.domain;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import lombok.NoArgsConstructor;
-
-
 @Getter
 @Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype")
+@EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Workout {
+public abstract class Workout {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,28 +34,18 @@ public class Workout {
     @OneToMany(mappedBy = "workout", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<WorkoutDetail> details = new ArrayList<>();
 
-    public static Workout create(WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
-        Workout workout = new Workout();
-        workout.type = type;
-        workout.durationMinutes = durationMinutes;
-        workout.memo = memo;
-        workout.workoutDateTime = workoutDateTime;
-        return workout;
-    }
+    @CreatedDate
+    @Column(updatable = false)
+    private LocalDateTime createdAt;
 
-    public static Workout withId(Long id, Workout workout) {
-        Workout saved = new Workout();
-        saved.id = id;
-        saved.type = workout.type;
-        saved.durationMinutes = workout.durationMinutes;
-        saved.memo = workout.memo;
-        saved.workoutDateTime = workout.workoutDateTime;
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
 
-        for (WorkoutDetail detail : workout.details) {
-            saved.addDetail(detail);
-        }
-
-        return saved;
+    protected Workout(WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+        this.type = type;
+        this.durationMinutes = durationMinutes;
+        this.memo = memo;
+        this.workoutDateTime = workoutDateTime;
     }
 
     public void addDetail(WorkoutDetail detail) {
@@ -59,4 +53,13 @@ public class Workout {
         detail.assignWorkout(this);
     }
 
+    public void clearDetails() {
+        details.clear();
+    }
+
+    protected void updateCommon(Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+        this.durationMinutes = durationMinutes;
+        this.memo = memo;
+        this.workoutDateTime = workoutDateTime;
+    }
 }
