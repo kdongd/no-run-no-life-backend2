@@ -17,7 +17,7 @@
 | Framework | Spring Boot 3.5             |
 | API | REST API, springdoc-openapi (Swagger UI) |
 | Build | Gradle                      |
-| DB | MySQL / H2 (테스트)            |
+| DB | MySQL (운영) / MySQL Testcontainers, H2 (테스트) |
 | ORM | Spring Data JPA / Hibernate |
 | CI | GitHub Actions               |
 
@@ -25,11 +25,16 @@
 
 ## ⚙️ 실행 방법
 
+로컬에 MySQL이 떠 있어야 하고, `norunnolife` 데이터베이스와 접속 계정이 필요합니다. `spring.datasource.username`/`password`는 `application.yml`에서 환경변수 `DB_USERNAME`/`DB_PASSWORD`로 주입받으므로, 실행 전에 값을 설정해야 합니다.
+
+    export DB_USERNAME=your_db_user
+    export DB_PASSWORD=your_db_password
     ./gradlew bootRun
 
 서버 실행 후 `http://localhost:8080` 에서 API 사용 가능
-H2 콘솔: `http://localhost:8080/h2-console`
 Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+
+H2 콘솔(`http://localhost:8080/h2-console`)도 활성화되어 있지만, 실제 데이터소스는 MySQL입니다. 콘솔에서 뭔가 조회하려면 접속 화면에서 JDBC URL을 MySQL 접속 정보(`jdbc:mysql://localhost:3306/norunnolife`)로 직접 바꿔 입력해야 하며, 기본값(H2 임베디드 URL) 그대로는 앱 데이터가 보이지 않습니다.
 
 ---
 
@@ -47,8 +52,7 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
     │   ├── BoxingWorkout.java
     │   ├── WorkoutDetail.java
     │   ├── WorkoutType.java
-    │   ├── TechniqueType.java
-    │   └── WorkoutIdAssigner.java
+    │   └── TechniqueType.java
     ├── dto
     │   ├── WorkoutForm.java
     │   ├── WorkoutDetailForm.java
@@ -70,8 +74,7 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
     │   ├── WorkoutQueryRepository.java
     │   ├── JpaWorkoutRepository.java
     │   ├── JpaWorkoutRepositoryAdapter.java
-    │   ├── WorkoutSpecifications.java
-    │   └── MemoryWorkoutRepository.java
+    │   └── WorkoutSpecifications.java
     └── service
         └── WorkoutService.java
 
@@ -109,23 +112,23 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 **Workout / RunningWorkout / BoxingWorkout**
 - `Workout`은 `abstract` 클래스, `@Inheritance(strategy = InheritanceType.SINGLE_TABLE)` + `@DiscriminatorColumn(name = "dtype")` 적용
 - `RunningWorkout`(distanceKm, place, caloriesBurned), `BoxingWorkout`(rounds, sparringPartner, techniqueType)이 `Workout`을 상속
-- 정적 팩토리 메서드 `create()`로만 생성 — 객체 생성 방식 통제
+- 정적 팩토리 메서드 `create()`로만 생성 — 객체 생성 방식 통제 (생성자는 private)
 - `update()`로 같은 타입 내 필드 전체 교체 — 타입 자체는 변경 불가(요청 타입이 기존과 다르면 `WorkoutTypeMismatchException`)
 - `addDetail()` / `clearDetails()`로 WorkoutDetail 추가·전체 교체 — 연관관계 편의 메서드
 - `@NoArgsConstructor(access = AccessLevel.PROTECTED)` — JPA 프록시 생성용, 외부 직접 호출 차단
 - `@CreatedDate`/`@LastModifiedDate` + `@EntityListeners(AuditingEntityListener.class)`로 생성/수정 시각 자동 관리 (`AuditingConfig`의 `@EnableJpaAuditing`으로 활성화)
-
-**WorkoutIdAssigner**
-- `MemoryWorkoutRepository`가 저장 시 id를 부여하기 위한 전용 통로
-- `Workout.assignId()`는 package-private으로 캡슐화, `domain` 패키지 내부에서만 접근 가능하도록 제한
+- id는 `@GeneratedValue(strategy = GenerationType.IDENTITY)`로 DB가 채번 (별도 id 할당기는 없음)
 
 **WorkoutDetail**
 - `@ManyToOne(fetch = FetchType.LAZY)` — 지연 로딩으로 불필요한 쿼리 방지
 
 ### 3) DTO
 - `record` 타입으로 불변 객체 — 요청 데이터 변경 불필요
-- Bean Validation으로 입력값 검증 (`@NotNull`, `@Min`, `@Max`, `@Size`, `@PastOrPresent`)
-- `WorkoutForm`에 러닝·복싱 전용 필드를 모두 두고, `@AssertTrue` 커스텀 검증으로 타입-필드 정합성 체크 (러닝인데 distanceKm 없으면 400, 복싱인데 rounds 없으면 400). 등록/수정 폼이 필드·검증 로직이 100% 동일해 `WorkoutForm` 하나로 통합, 타입 불변성은 서비스 계층에서 처리
+- Bean Validation으로 입력값 검증 (`@NotNull`, `@Min`, `@Max`, `@Size`, `@PastOrPresent`, `@Positive`)
+- `WorkoutForm`에 러닝·복싱 전용 필드를 모두 두고, `@AssertTrue` 커스텀 검증 4종으로 타입-필드 정합성을 양방향 체크
+  - 러닝인데 `distanceKm` 없으면 400 / 복싱인데 `rounds` 없으면 400
+  - 복싱인데 러닝 전용 필드(`distanceKm`/`place`/`caloriesBurned`)를 보내도 400 / 러닝인데 복싱 전용 필드(`rounds`/`sparringPartner`/`techniqueType`)를 보내도 400
+  - 등록/수정 폼이 필드·검증 로직이 100% 동일해 `WorkoutForm` 하나로 통합, 타입 불변성(수정 시 타입 변경 금지)은 서비스 계층에서 처리
 - `WorkoutResponse`/`WorkoutSummaryResponse`는 `WorkoutTypeFields`로 `instanceof` 분기를 공통화해 타입별 필드를 노출
 - `WorkoutSummaryResponse` — 목록 조회 전용 DTO, `details` 제외
   (컬렉션 fetch join + 페이징 조합 시 발생하는 HHH000104 경고를 원천 차단)
@@ -136,7 +139,7 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 ### 4) Repository
 - 인터페이스 분리 — `WorkoutRepository`(CRUD 전용: save/findById/delete)와
   `WorkoutQueryRepository`(검색/통계: search/statsByType/statsByMonth)를 분리
-  - 서비스는 두 인터페이스에만 의존, 구현체 교체 가능
+  - 서비스는 두 인터페이스에만 의존하는 구조라 구현체 교체가 가능하지만, 현재 구현체는 `JpaWorkoutRepositoryAdapter` 하나뿐입니다(`@Primary`는 지금 시점에는 별 의미 없이 붙어 있는 상태).
 - `JpaWorkoutRepository` — Spring Data JPA, `JpaSpecificationExecutor` 상속
   - 단건 조회(`findByIdWithDetails`)는 `LEFT JOIN FETCH`로 N+1 해결
   - 목록 검색은 `WorkoutSpecifications`로 동적 조건을 조합해 처리 (파생 쿼리 메서드 방식 대신 Specification 사용)
@@ -145,8 +148,6 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
   - `search()`는 type/from/to 존재 여부에 따라 `WorkoutSpecifications`의 조건들을 동적으로 조합
   - `from`/`to` 경계는 둘 다 포함(`greaterThanOrEqualTo`/`lessThanOrEqualTo`)으로 통일
   - `distanceKm` 정렬은 `cb.treat()`로 서브클래스(RunningWorkout) 필드에 접근, `CASE WHEN` 표현식으로 NULLS LAST 처리 (다른 타입 레코드는 정렬 결과 뒤로)
-- `MemoryWorkoutRepository` — 메모리 저장소, `ConcurrentHashMap` + `AtomicLong`으로 동시성 처리
-  - `WorkoutRepository`(CRUD)만 구현, 검색/통계 기능은 제공하지 않음
 - 통계는 DTO Projection(`select new ...`)으로 DB GROUP BY 집계 — 애플리케이션 레벨 합산 금지
   - `statsByType()`은 `coalesce(sum(...), 0L)`로 합계가 null이 되는 경우를 방어
   - `statsByMonth()`은 `extract(year/month from ...)`를 사용해 DB 방언 종속성 제거
@@ -199,12 +200,12 @@ Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 
 ## ✅ 구현 기능
 - 운동 기록 등록 / 단건 조회 / 수정 / 삭제 API
-- 러닝/복싱 타입별 속성 분화 (JPA SINGLE_TABLE 상속) 및 타입-필드 정합성 검증
+- 러닝/복싱 타입별 속성 분화 (JPA SINGLE_TABLE 상속) 및 타입-필드 정합성 검증(양방향)
 - 운동 세부 기록 (WorkoutDetail) 1:N 관계 관리, 수정 시 전체 교체
 - 서버 사이드 유효성 검증
 - 단건 조회 N+1 문제 해결 (LEFT JOIN FETCH)
 - 전역 예외 처리
-- JPA / 메모리 저장소 교체 가능한 어댑터 패턴 + CRUD/Query 인터페이스 분리
+- CRUD/Query 인터페이스 분리로 구현체 교체가 가능한 구조 (현재 구현체는 JPA 어댑터 하나)
 - CORS 설정으로 프론트엔드 연동 (설정 파일로 externalize)
 - 타입·기간 조건 검색 + 정렬 (Specification 기반, 경계 정책 통일), 타입 전용 필드 정렬 시 NULLS LAST 처리
 - 정렬 필드 화이트리스트 검증
