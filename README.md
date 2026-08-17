@@ -214,3 +214,23 @@ H2 콘솔(`http://localhost:8080/h2-console`)도 활성화되어 있지만, 실�
 - JPA Auditing (createdAt, updatedAt 자동 관리)
 - Swagger(OpenAPI) API 문서 자동 생성
 - GitHub Actions CI + main 브랜치 보호
+
+---
+
+## 📝 회고 & 향후 계획
+
+### 회고
+- 6주간 REST API 서버를 처음부터 단계적으로 설계·구현하며, 엔티티 상속(SINGLE_TABLE) / DTO 분리 / Specification 기반 동적 쿼리 / N+1 대응 / DB 집계 통계 등 실무에서 마주치는 문제들을 직접 겪고 해결
+- 특히 컨트롤러가 엔티티를 직접 반환할 때 발생하는 순환 참조 문제(HttpMessageNotWritableException)를 DTO 계층으로 근본 해결한 경험이 가장 크게 남음 — `@JsonIgnore`로 증상만 가리는 대신, 응답 객체 자체에 역참조를 두지 않는 구조로 설계
+
+### 향후 확장 계획 (기획 중)
+현재 완성된 CRUD/검색/통계 서버를 베이스로 아래 기능을 검토 중. 기술적으로 난이도 차이가 커서 우선순위를 나눔.
+
+| 기능 | 핵심 기술 | 난이도 |
+|------|-----------|--------|
+| 로그인 (JWT / OAuth2) | Spring Security, Refresh Token 로테이션, bcrypt | 중 |
+| 회원별 관리 (프로필, RBAC) | Spring Security 권한 체계, S3 연동 | 중 |
+| 챌린지 & 배지 시스템 | Redis Sorted Set, 이벤트 기반 처리 | 상 |
+| 오운완 기록 공유 | Web Share API (모바일 브라우저 네이티브 공유 시트) — 기획 초안의 Instagram Graph API/Stories 연동은 개인 계정 스토리 공유 용도로는 부적합해 웹 표준 API로 방향 수정 |
+
+전체 기획안 및 마일스톤은 별도 문서 참고.
