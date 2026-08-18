@@ -1,5 +1,6 @@
 package com.kdongdexample.norunnolifeexample.controller;
 
+import com.kdongdexample.norunnolifeexample.dto.GoogleLoginRequest;
 import com.kdongdexample.norunnolifeexample.dto.LoginRequest;
 import com.kdongdexample.norunnolifeexample.dto.SignupRequest;
 import com.kdongdexample.norunnolifeexample.dto.TokenResponse;
@@ -28,5 +29,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<TokenResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogle(request));
     }
 }
