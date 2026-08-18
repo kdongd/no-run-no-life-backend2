@@ -1,5 +1,6 @@
 package com.kdongdexample.norunnolifeexample.config;
 
+import org.springframework.http.HttpMethod;
 import com.kdongdexample.norunnolifeexample.security.JwtAuthenticationFilter;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +25,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, JwtTokenProvider jwtTokenProvider) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
