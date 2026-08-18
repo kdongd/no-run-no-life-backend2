@@ -1,6 +1,7 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
+import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
@@ -49,8 +50,8 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        Specification<Workout> spec = buildSpecification(type, from, to);
+    public Page<Workout> search(User owner, WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+        Specification<Workout> spec = buildSpecification(owner, type, from, to);
 
         boolean needsCustomSort = pageable.getSort().stream()
                 .anyMatch(order -> SUBCLASS_SORT_PROPERTIES.contains(order.getProperty()));
@@ -66,9 +67,6 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
 
     private Specification<Workout> buildSortSpecification(Sort sort) {
         return (root, query, cb) -> {
-            // count 쿼리(결과 타입이 Long)에는 정렬을 적용하지 않는다.
-            // query.orderBy()가 count 쿼리에도 호출되면 SQL이 깨지거나
-            // 결과가 왜곡될 수 있어(예: LIMIT과 무관하게 totalElements가 틀어짐).
             if (Long.class.equals(query.getResultType())) {
                 return cb.conjunction();
             }
@@ -96,8 +94,9 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
         };
     }
 
-    private Specification<Workout> buildSpecification(WorkoutType type, LocalDateTime from, LocalDateTime to) {
+    private Specification<Workout> buildSpecification(User owner, WorkoutType type, LocalDateTime from, LocalDateTime to) {
         List<Specification<Workout>> specs = new ArrayList<>();
+        specs.add(WorkoutSpecifications.hasOwner(owner));
         if (type != null) specs.add(WorkoutSpecifications.hasType(type));
         if (from != null) specs.add(WorkoutSpecifications.fromDate(from));
         if (to != null) specs.add(WorkoutSpecifications.toDate(to));
@@ -108,12 +107,12 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to) {
-        return jpaWorkoutRepository.statsByType(from, to);
+    public List<WorkoutStatByType> statsByType(User owner, LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByType(owner, from, to);
     }
 
     @Override
-    public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to) {
-        return jpaWorkoutRepository.statsByMonth(from, to);
+    public List<WorkoutMonthlyStat> statsByMonth(User owner, LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByMonth(owner, from, to);
     }
 }

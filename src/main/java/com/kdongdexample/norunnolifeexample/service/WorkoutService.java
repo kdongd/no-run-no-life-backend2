@@ -2,6 +2,7 @@ package com.kdongdexample.norunnolifeexample.service;
 
 import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
 import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
+import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutDetail;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
@@ -12,6 +13,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
+import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.springframework.data.domain.Page;
@@ -34,20 +36,24 @@ public class WorkoutService {
 
     private final WorkoutRepository repository;
     private final WorkoutQueryRepository queryRepository;
+    private final UserRepository userRepository;
 
-    public WorkoutService(WorkoutRepository repository, WorkoutQueryRepository queryRepository) {
+    public WorkoutService(WorkoutRepository repository, WorkoutQueryRepository queryRepository, UserRepository userRepository) {
         this.repository = repository;
         this.queryRepository = queryRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
-    public Workout save(WorkoutForm form) {
+    public Workout save(WorkoutForm form, Long userId) {
+        User owner = resolveOwner(userId);
+
         Workout workout = switch (form.type()) {
             case RUNNING -> RunningWorkout.create(
-                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    owner, form.durationMinutes(), form.memo(), form.workoutDateTime(),
                     form.distanceKm(), form.place(), form.caloriesBurned());
             case BOXING -> BoxingWorkout.create(
-                    form.durationMinutes(), form.memo(), form.workoutDateTime(),
+                    owner, form.durationMinutes(), form.memo(), form.workoutDateTime(),
                     form.rounds(), form.sparringPartner(), form.techniqueType());
         };
 
@@ -61,19 +67,23 @@ public class WorkoutService {
         return repository.save(workout);
     }
 
-    public Workout findById(Long id) {
-        return repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+    public Workout findById(Long id, Long userId) {
+        Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+        validateOwner(workout, userId);
+        return workout;
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, Long userId) {
         Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+        validateOwner(workout, userId);
         repository.delete(workout);
     }
 
     @Transactional
-    public Workout update(Long id, WorkoutForm form) {
+    public Workout update(Long id, WorkoutForm form, Long userId) {
         Workout workout = repository.findById(id).orElseThrow(() -> new WorkoutNotFoundException(id));
+        validateOwner(workout, userId);
 
         if (workout.getType() != form.type()) {
             throw new WorkoutTypeMismatchException(workout.getType(), form.type());
@@ -98,9 +108,10 @@ public class WorkoutService {
         return workout;
     }
 
-    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+    public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable, Long userId) {
         validateSort(pageable.getSort());
-        return queryRepository.search(type, from, to, pageable);
+        User owner = resolveOwner(userId);
+        return queryRepository.search(owner, type, from, to, pageable);
     }
 
     private void validateSort(Sort sort) {
@@ -111,11 +122,24 @@ public class WorkoutService {
         });
     }
 
-    public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to) {
-        return queryRepository.statsByType(from, to);
+    public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to, Long userId) {
+        User owner = resolveOwner(userId);
+        return queryRepository.statsByType(owner, from, to);
     }
 
-    public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to) {
-        return queryRepository.statsByMonth(from, to);
+    public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to, Long userId) {
+        User owner = resolveOwner(userId);
+        return queryRepository.statsByMonth(owner, from, to);
+    }
+
+    private User resolveOwner(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalStateException("인증된 사용자를 찾을 수 없습니다. id: " + userId));
+    }
+
+    private void validateOwner(Workout workout, Long userId) {
+        if (!workout.getOwner().getId().equals(userId)) {
+            throw new WorkoutNotFoundException(workout.getId());
+        }
     }
 }

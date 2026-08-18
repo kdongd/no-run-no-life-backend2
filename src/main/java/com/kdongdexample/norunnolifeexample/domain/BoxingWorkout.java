@@ -22,17 +22,17 @@ public class BoxingWorkout extends Workout {
     @Enumerated(EnumType.STRING)
     private TechniqueType techniqueType;
 
-    private BoxingWorkout(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+    private BoxingWorkout(User owner, Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
                           Integer rounds, String sparringPartner, TechniqueType techniqueType) {
-        super(WorkoutType.BOXING, durationMinutes, memo, workoutDateTime);
+        super(owner, WorkoutType.BOXING, durationMinutes, memo, workoutDateTime);
         this.rounds = rounds;
         this.sparringPartner = sparringPartner;
         this.techniqueType = techniqueType;
     }
 
-    public static BoxingWorkout create(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+    public static BoxingWorkout create(User owner, Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
                                        Integer rounds, String sparringPartner, TechniqueType techniqueType) {
-        return new BoxingWorkout(durationMinutes, memo, workoutDateTime, rounds, sparringPartner, techniqueType);
+        return new BoxingWorkout(owner, durationMinutes, memo, workoutDateTime, rounds, sparringPartner, techniqueType);
     }
 
     public void update(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,

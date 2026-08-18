@@ -24,6 +24,10 @@ public abstract class Workout {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User owner;
+
     @Enumerated(EnumType.STRING)
     private WorkoutType type;
 
@@ -41,7 +45,8 @@ public abstract class Workout {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    protected Workout(WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+    protected Workout(User owner, WorkoutType type, Integer durationMinutes, String memo, LocalDateTime workoutDateTime) {
+        this.owner = owner;
         this.type = type;
         this.durationMinutes = durationMinutes;
         this.memo = memo;

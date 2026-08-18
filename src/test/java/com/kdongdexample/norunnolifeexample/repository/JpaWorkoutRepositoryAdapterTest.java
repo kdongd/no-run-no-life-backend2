@@ -3,7 +3,9 @@ package com.kdongdexample.norunnolifeexample.repository;
 import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
 import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
 import com.kdongdexample.norunnolifeexample.domain.TechniqueType;
+import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,16 +36,26 @@ class JpaWorkoutRepositoryAdapterTest {
     @Autowired
     private JpaWorkoutRepositoryAdapter adapter;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User owner;
+
+    @BeforeEach
+    void setUpOwner() {
+        owner = userRepository.save(User.create("test@test.com", "encoded-password"));
+    }
+
     @Test
     @DisplayName("distanceKm으로 정렬하면 복싱 기록도 포함되고 null은 마지막으로 온다")
     void sortByDistanceKmIncludesBoxingWorkoutsWithNullsLast() {
         // given
         RunningWorkout running10km = RunningWorkout.create(
-                60, "메모", LocalDateTime.now().minusDays(1), 10.0, "한강", 500);
+                owner, 60, "메모", LocalDateTime.now().minusDays(1), 10.0, "한강", 500);
         RunningWorkout running5km = RunningWorkout.create(
-                30, "메모", LocalDateTime.now().minusDays(2), 5.0, "한강", 300);
+                owner, 30, "메모", LocalDateTime.now().minusDays(2), 5.0, "한강", 300);
         BoxingWorkout boxing = BoxingWorkout.create(
-                45, "메모", LocalDateTime.now().minusDays(3), 3, "파트너", TechniqueType.SPARRING);
+                owner, 45, "메모", LocalDateTime.now().minusDays(3), 3, "파트너", TechniqueType.SPARRING);
 
         adapter.save(running10km);
         adapter.save(running5km);
@@ -51,7 +63,7 @@ class JpaWorkoutRepositoryAdapterTest {
 
         // when
         Page<Workout> result = adapter.search(
-                null, null, null,
+                owner, null, null, null,
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "distanceKm")));
 
         // then
@@ -67,19 +79,18 @@ class JpaWorkoutRepositoryAdapterTest {
     void countQueryReturnsCorrectTotalWhenSortingByDistanceKm() {
         // given
         adapter.save(RunningWorkout.create(
-                60, "메모", LocalDateTime.now(), 10.0, "한강", 500));
+                owner, 60, "메모", LocalDateTime.now(), 10.0, "한강", 500));
         adapter.save(RunningWorkout.create(
-                30, "메모", LocalDateTime.now(), 5.0, "한강", 300));
+                owner, 30, "메모", LocalDateTime.now(), 5.0, "한강", 300));
         adapter.save(BoxingWorkout.create(
-                45, "메모", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING));
+                owner, 45, "메모", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING));
 
         // when
         Page<Workout> result = adapter.search(
-                null, null, null,
+                owner, null, null, null,
                 PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "distanceKm")));
 
         // then
-        // order by가 count 쿼리에 새었다면 totalElements가 틀어지거나 예외 발생
         assertThat(result.getTotalElements()).isEqualTo(3);
         assertThat(result.getTotalPages()).isEqualTo(2);
         assertThat(result.getContent()).hasSize(2);

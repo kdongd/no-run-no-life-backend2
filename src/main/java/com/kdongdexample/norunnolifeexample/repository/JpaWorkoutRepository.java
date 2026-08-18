@@ -1,5 +1,6 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
+import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
@@ -20,19 +21,21 @@ public interface JpaWorkoutRepository extends JpaRepository<Workout, Long>, JpaS
     @Query("select new com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType(" +
             "w.type, count(w), coalesce(sum(w.durationMinutes), 0L)) " +
             "from Workout w " +
-            "where (:from is null or w.workoutDateTime >= :from) " +
+            "where w.owner = :owner " +
+            "and (:from is null or w.workoutDateTime >= :from) " +
             "and (:to is null or w.workoutDateTime <= :to) " +
             "group by w.type")
-    List<WorkoutStatByType> statsByType(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<WorkoutStatByType> statsByType(@Param("owner") User owner, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("select new com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat(" +
             "extract(year from w.workoutDateTime), " +
             "extract(month from w.workoutDateTime), " +
             "count(w)) " +
             "from Workout w " +
-            "where (:from is null or w.workoutDateTime >= :from) " +
+            "where w.owner = :owner " +
+            "and (:from is null or w.workoutDateTime >= :from) " +
             "and (:to is null or w.workoutDateTime <= :to) " +
             "group by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime) " +
             "order by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime)")
-    List<WorkoutMonthlyStat> statsByMonth(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<WorkoutMonthlyStat> statsByMonth(@Param("owner") User owner, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }
