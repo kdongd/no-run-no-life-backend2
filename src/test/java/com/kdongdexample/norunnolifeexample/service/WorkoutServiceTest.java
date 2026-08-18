@@ -234,9 +234,9 @@ class WorkoutServiceTest {
     @DisplayName("타입별 통계는 queryRepository에 위임한다")
     void statsByType_delegatesToQueryRepository() {
         List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 3L, 90L));
-        given(queryRepository.statsByType()).willReturn(stats);
+        given(queryRepository.statsByType(null, null)).willReturn(stats);
 
-        List<WorkoutStatByType> result = service().statsByType();
+        List<WorkoutStatByType> result = service().statsByType(null, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).type()).isEqualTo(WorkoutType.RUNNING);
@@ -246,11 +246,25 @@ class WorkoutServiceTest {
     @DisplayName("월별 통계는 queryRepository에 위임한다")
     void statsByMonth_delegatesToQueryRepository() {
         List<WorkoutMonthlyStat> stats = List.of(new WorkoutMonthlyStat(2026, 5, 4L));
-        given(queryRepository.statsByMonth()).willReturn(stats);
+        given(queryRepository.statsByMonth(null, null)).willReturn(stats);
 
-        List<WorkoutMonthlyStat> result = service().statsByMonth();
+        List<WorkoutMonthlyStat> result = service().statsByMonth(null, null);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).year()).isEqualTo(2026);
+    }
+
+    @Test
+    @DisplayName("기간 필터를 지정하면 queryRepository에 from/to가 그대로 전달된다")
+    void statsByType_withDateRange_passesThroughToQueryRepository() {
+        LocalDateTime from = LocalDateTime.of(2026, 5, 1, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 5, 31, 23, 59);
+        List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 1L, 30L));
+        given(queryRepository.statsByType(from, to)).willReturn(stats);
+
+        List<WorkoutStatByType> result = service().statsByType(from, to);
+
+        assertThat(result).hasSize(1);
+        verify(queryRepository).statsByType(from, to);
     }
 }

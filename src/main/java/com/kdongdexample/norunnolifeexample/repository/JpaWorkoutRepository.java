@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,14 +19,20 @@ public interface JpaWorkoutRepository extends JpaRepository<Workout, Long>, JpaS
 
     @Query("select new com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType(" +
             "w.type, count(w), coalesce(sum(w.durationMinutes), 0L)) " +
-            "from Workout w group by w.type")
-    List<WorkoutStatByType> statsByType();
+            "from Workout w " +
+            "where (:from is null or w.workoutDateTime >= :from) " +
+            "and (:to is null or w.workoutDateTime <= :to) " +
+            "group by w.type")
+    List<WorkoutStatByType> statsByType(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("select new com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat(" +
             "extract(year from w.workoutDateTime), " +
             "extract(month from w.workoutDateTime), " +
             "count(w)) " +
-            "from Workout w group by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime) " +
+            "from Workout w " +
+            "where (:from is null or w.workoutDateTime >= :from) " +
+            "and (:to is null or w.workoutDateTime <= :to) " +
+            "group by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime) " +
             "order by extract(year from w.workoutDateTime), extract(month from w.workoutDateTime)")
-    List<WorkoutMonthlyStat> statsByMonth();
+    List<WorkoutMonthlyStat> statsByMonth(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }

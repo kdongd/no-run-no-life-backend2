@@ -116,7 +116,7 @@ class WorkoutRepositoryTest {
         BoxingWorkout workout = BoxingWorkout.create(null, "메모", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING);
         jpaWorkoutRepository.save(workout);
 
-        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType();
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(null, null);
 
         WorkoutStatByType boxingStat = stats.stream()
                 .filter(s -> s.type() == WorkoutType.BOXING)
@@ -133,7 +133,7 @@ class WorkoutRepositoryTest {
         jpaWorkoutRepository.save(RunningWorkout.create(30, "2", LocalDateTime.of(2026, 5, 20, 9, 0), 5.0, "한강", 300));
         jpaWorkoutRepository.save(BoxingWorkout.create(60, "3", LocalDateTime.of(2026, 6, 1, 9, 0), 3, "파트너", TechniqueType.SPARRING));
 
-        List<WorkoutMonthlyStat> stats = jpaWorkoutRepository.statsByMonth();
+        List<WorkoutMonthlyStat> stats = jpaWorkoutRepository.statsByMonth(null, null);
 
         WorkoutMonthlyStat may = stats.stream()
                 .filter(s -> s.year() == 2026 && s.month() == 5)
@@ -146,5 +146,20 @@ class WorkoutRepositoryTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(june.count()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("from 기간 필터를 지정하면 그 이전 기록은 통계에서 제외된다")
+    void statsByType_withFromFilter_excludesEarlierRecords() {
+        jpaWorkoutRepository.save(RunningWorkout.create(30, "이전", LocalDateTime.of(2026, 4, 1, 0, 0), 5.0, "한강", 300));
+        jpaWorkoutRepository.save(RunningWorkout.create(30, "이후", LocalDateTime.of(2026, 6, 1, 0, 0), 5.0, "한강", 300));
+
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(LocalDateTime.of(2026, 5, 1, 0, 0), null);
+
+        WorkoutStatByType runningStat = stats.stream()
+                .filter(s -> s.type() == WorkoutType.RUNNING)
+                .findFirst()
+                .orElseThrow();
+        assertThat(runningStat.count()).isEqualTo(1L);
     }
 }

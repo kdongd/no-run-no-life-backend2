@@ -17,6 +17,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -61,12 +62,14 @@ class WorkoutControllerTest {
         RunningWorkout workout = RunningWorkout.create(
                 form.durationMinutes(), form.memo(), form.workoutDateTime(),
                 form.distanceKm(), form.place(), form.caloriesBurned());
+        ReflectionTestUtils.setField(workout, "id", 1L);
         given(service.save(any())).willReturn(workout);
 
         mockMvc.perform(post("/workouts")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(form)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", org.hamcrest.Matchers.endsWith("/workouts/1")));
     }
 
     @Test

@@ -2,25 +2,36 @@ package com.kdongdexample.norunnolifeexample.controller;
 
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
+import com.kdongdexample.norunnolifeexample.dto.PageResponse;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutResponse;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutSummaryResponse;
+import com.kdongdexample.norunnolifeexample.exception.ErrorResponse;
 import com.kdongdexample.norunnolifeexample.service.WorkoutService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Tag(name = "Workout", description = "운동 기록 관리 API")
 @RestController
 public class WorkoutController {
     private final WorkoutService service;
@@ -29,48 +40,93 @@ public class WorkoutController {
         this.service = service;
     }
 
+    @Operation(summary = "운동 기록 검색", description = "타입/기간으로 필터링하고 페이지네이션·정렬하여 운동 기록 목록을 조회한다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "정렬 필드 또는 파라미터 형식 오류",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/workouts")
-    public ResponseEntity<Page<WorkoutSummaryResponse>> searchWorkouts(
-            @RequestParam(required = false) WorkoutType type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @PageableDefault(size = 10, sort = "workoutDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+    public ResponseEntity<PageResponse<WorkoutSummaryResponse>> searchWorkouts(
+            @Parameter(description = "운동 타입 필터") @RequestParam(required = false) WorkoutType type,
+            @Parameter(description = "조회 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @Parameter(description = "조회 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @Parameter(description = "페이지, 사이즈, 정렬 파라미터") @PageableDefault(size = 10, sort = "workoutDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<WorkoutSummaryResponse> page = service.search(type, from, to, pageable)
                 .map(WorkoutSummaryResponse::from);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(PageResponse.from(page));
     }
 
+    @Operation(summary = "운동 기록 등록", description = "러닝 또는 복싱 운동 기록을 새로 등록한다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "등록 성공"),
+            @ApiResponse(responseCode = "400", description = "입력값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/workouts")
     public ResponseEntity<WorkoutResponse> createWorkout(@Valid @RequestBody WorkoutForm form) {
         Workout saved = service.save(form);
-        return ResponseEntity.status(HttpStatus.CREATED).body(WorkoutResponse.from(saved));
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(saved.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(WorkoutResponse.from(saved));
     }
 
+    @Operation(summary = "운동 기록 단건 조회", description = "id로 운동 기록 상세를 조회한다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "404", description = "해당 id의 운동 기록 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @GetMapping("/workouts/{id}")
-    public ResponseEntity<WorkoutResponse> getWorkout(@PathVariable Long id) {
+    public ResponseEntity<WorkoutResponse> getWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id) {
         return ResponseEntity.ok(WorkoutResponse.from(service.findById(id)));
     }
 
+    @Operation(summary = "운동 기록 수정", description = "id로 조회된 운동 기록을 수정한다. 타입은 변경할 수 없다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "수정 성공"),
+            @ApiResponse(responseCode = "400", description = "입력값 검증 실패 또는 타입 불일치",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "해당 id의 운동 기록 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PutMapping("/workouts/{id}")
-    public ResponseEntity<WorkoutResponse> updateWorkout(@PathVariable Long id, @Valid @RequestBody WorkoutForm form) {
+    public ResponseEntity<WorkoutResponse> updateWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id,
+                                                         @Valid @RequestBody WorkoutForm form) {
         Workout updated = service.update(id, form);
         return ResponseEntity.ok(WorkoutResponse.from(updated));
     }
 
+    @Operation(summary = "운동 기록 삭제", description = "id로 운동 기록을 삭제한다")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @ApiResponse(responseCode = "404", description = "해당 id의 운동 기록 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @DeleteMapping("/workouts/{id}")
-    public ResponseEntity<Void> deleteWorkout(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "타입별 통계 조회", description = "기간 내 운동 타입별 건수와 총 시간을 조회한다. from/to 미지정 시 전체 기간 집계")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/workouts/stats/by-type")
-    public ResponseEntity<List<WorkoutStatByType>> getStatsByType() {
-        return ResponseEntity.ok(service.statsByType());
+    public ResponseEntity<List<WorkoutStatByType>> getStatsByType(
+            @Parameter(description = "집계 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return ResponseEntity.ok(service.statsByType(from, to));
     }
 
+    @Operation(summary = "월별 통계 조회", description = "기간 내 연/월별 운동 건수를 조회한다. from/to 미지정 시 전체 기간 집계")
+    @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping("/workouts/stats/monthly")
-    public ResponseEntity<List<WorkoutMonthlyStat>> getStatsByMonth() {
-        return ResponseEntity.ok(service.statsByMonth());
+    public ResponseEntity<List<WorkoutMonthlyStat>> getStatsByMonth(
+            @Parameter(description = "집계 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
+        return ResponseEntity.ok(service.statsByMonth(from, to));
     }
 }

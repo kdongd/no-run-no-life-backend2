@@ -34,7 +34,7 @@ class JpaWorkoutRepositoryMySQLTest {
         );
         repository.save(workout);
 
-        List<WorkoutMonthlyStat> result = repository.statsByMonth();
+        List<WorkoutMonthlyStat> result = repository.statsByMonth(null, null);
 
         assertThat(result).isNotEmpty();
         assertThat(result)

@@ -12,6 +12,6 @@ import java.util.List;
 
 public interface WorkoutQueryRepository {
     Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable);
-    List<WorkoutStatByType> statsByType();
-    List<WorkoutMonthlyStat> statsByMonth();
+    List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to);
+    List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to);
 }

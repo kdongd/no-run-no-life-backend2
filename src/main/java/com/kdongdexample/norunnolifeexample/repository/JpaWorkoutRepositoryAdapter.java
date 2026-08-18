@@ -108,12 +108,12 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public List<WorkoutStatByType> statsByType() {
-        return jpaWorkoutRepository.statsByType();
+    public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByType(from, to);
     }
 
     @Override
-    public List<WorkoutMonthlyStat> statsByMonth() {
-        return jpaWorkoutRepository.statsByMonth();
+    public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByMonth(from, to);
     }
 }

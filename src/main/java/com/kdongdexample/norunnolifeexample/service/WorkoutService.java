@@ -111,11 +111,11 @@ public class WorkoutService {
         });
     }
 
-    public List<WorkoutStatByType> statsByType() {
-        return queryRepository.statsByType();
+    public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to) {
+        return queryRepository.statsByType(from, to);
     }
 
-    public List<WorkoutMonthlyStat> statsByMonth() {
-        return queryRepository.statsByMonth();
+    public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to) {
+        return queryRepository.statsByMonth(from, to);
     }
 }
