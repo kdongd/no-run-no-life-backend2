@@ -1,5 +1,6 @@
 package com.kdongdexample.norunnolifeexample.config;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import com.kdongdexample.norunnolifeexample.security.CustomAuthenticationEntryPoint;
 import com.kdongdexample.norunnolifeexample.security.JwtAuthenticationFilter;
@@ -22,7 +23,22 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    // h2-console 전용 체인. sameOrigin()으로 h2-console 내부 프레임(같은 origin)은 허용하되
+    // 외부 사이트가 이 경로를 자기 iframe에 넣는 클릭재킹은 그대로 막는다.
     @Bean
+    @Order(1)
+    public SecurityFilterChain h2ConsoleFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/h2-console/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     public SecurityFilterChain filterChain(HttpSecurity http,
                                            JwtTokenProvider jwtTokenProvider,
                                            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) throws Exception {
@@ -32,10 +48,9 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
+                        .requestMatchers("/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
