@@ -15,7 +15,9 @@ import com.kdongdexample.norunnolifeexample.security.GoogleIdTokenValidator;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @Transactional(readOnly = true)
@@ -25,15 +27,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final GoogleIdTokenValidator googleIdTokenValidator;
+    private final TransactionTemplate transactionTemplate;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
-                       GoogleIdTokenValidator googleIdTokenValidator) {
+                       GoogleIdTokenValidator googleIdTokenValidator,
+                       PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.googleIdTokenValidator = googleIdTokenValidator;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
     @Transactional
@@ -49,7 +54,6 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        // OAuth 전용 계정(비밀번호 없음)이 일반 로그인을 시도하는 경우 방어
         if (!user.hasPassword() || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException();
         }
@@ -57,7 +61,7 @@ public class AuthService {
         return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
     }
 
-    @Transactional
+    // @Transactional 제거 — 구글 네트워크 호출이 트랜잭션(=DB 커넥션 점유) 밖에서 실행되게 함
     public TokenResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
 
@@ -68,9 +72,11 @@ public class AuthService {
         String email = payload.getEmail();
         String googleUserId = payload.getSubject();
 
-        // 이메일이 같으면 기존 계정(로컬 가입이든 이미 구글 연동이든)에 그대로 로그인 처리 - 자동 연결
-        User user = userRepository.findByEmail(email)
-                .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)));
+        // DB 조회/저장만 트랜잭션으로 묶음 — 커넥션이 구글 호출 시간만큼 묶이지 않음
+        User user = transactionTemplate.execute(status ->
+                userRepository.findByEmail(email)
+                        .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)))
+        );
 
         return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
     }
