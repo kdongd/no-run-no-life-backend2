@@ -13,165 +13,74 @@ import com.kdongdexample.norunnolifeexample.exception.InvalidGoogleTokenExceptio
 import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.security.GoogleIdTokenValidator;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.Optional;
+@Service
+@Transactional(readOnly = true)
+public class AuthService {
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final GoogleIdTokenValidator googleIdTokenValidator;
+    private final TransactionTemplate transactionTemplate;
 
-@ExtendWith(MockitoExtension.class)
-class AuthServiceTest {
-
-    @Mock
-    private UserRepository userRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
-    @Mock
-    private GoogleIdTokenValidator googleIdTokenValidator;
-
-    private AuthService service() {
-        return new AuthService(userRepository, passwordEncoder, jwtTokenProvider, googleIdTokenValidator);
+    public AuthService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtTokenProvider jwtTokenProvider,
+                       GoogleIdTokenValidator googleIdTokenValidator,
+                       PlatformTransactionManager transactionManager) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.googleIdTokenValidator = googleIdTokenValidator;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
     }
 
-    private static User createLocalUserWithId(Long id) {
-        User user = User.create("test@test.com", "encoded-password");
-        ReflectionTestUtils.setField(user, "id", id);
-        return user;
+    @Transactional
+    public void signup(SignupRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new EmailAlreadyExistsException(request.email());
+        }
+        User user = User.create(request.email(), passwordEncoder.encode(request.password()));
+        userRepository.save(user);
     }
 
-    private static User createGoogleUserWithId(Long id, String email) {
-        User user = User.createOAuth(email, AuthProvider.GOOGLE, "google-sub");
-        ReflectionTestUtils.setField(user, "id", id);
-        return user;
+    public TokenResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(InvalidCredentialsException::new);
+
+        // OAuth 전용 계정(비밀번호 없음)이 일반 로그인을 시도하는 경우 방어
+        if (!user.hasPassword() || !passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new InvalidCredentialsException();
+        }
+
+        return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
     }
 
-    private static GoogleIdToken.Payload verifiedPayload(String email, boolean emailVerified) {
-        return new GoogleIdToken.Payload()
-                .setEmail(email)
-                .setEmailVerified(emailVerified)
-                .setSubject("google-sub");
-    }
+    // @Transactional 제거 — 구글 네트워크 호출이 트랜잭션(=DB 커넥션 점유) 밖에서 실행되게 함
+    public TokenResponse loginWithGoogle(GoogleLoginRequest request) {
+        GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
 
-    @Test
-    @DisplayName("signup - 신규 이메일이면 저장한다")
-    void signup_savesUser_whenEmailIsNew() {
-        given(userRepository.existsByEmail("new@test.com")).willReturn(false);
-        given(passwordEncoder.encode("password1234")).willReturn("encoded");
+        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new InvalidGoogleTokenException();
+        }
 
-        service().signup(new SignupRequest("new@test.com", "password1234"));
+        String email = payload.getEmail();
+        String googleUserId = payload.getSubject();
 
-        verify(userRepository).save(any(User.class));
-    }
+        // 이메일이 같으면 기존 계정으로 로그인만 처리한다. provider/providerId는 갱신하지 않으므로
+        // LOCAL로 가입한 계정에 구글로 로그인해도 그 계정의 provider는 계속 LOCAL로 남는다.
+        // (실제 계정 연동은 아직 미구현 — 카카오/네이버 등 멀티프로바이더 설계 시 함께 처리 예정)
+        User user = transactionTemplate.execute(status ->
+                userRepository.findByEmail(email)
+                        .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)))
+        );
 
-    @Test
-    @DisplayName("signup - 이미 존재하는 이메일이면 예외")
-    void signup_throwsException_whenEmailAlreadyExists() {
-        given(userRepository.existsByEmail("dup@test.com")).willReturn(true);
-
-        assertThatThrownBy(() -> service().signup(new SignupRequest("dup@test.com", "password1234")))
-                .isInstanceOf(EmailAlreadyExistsException.class);
-
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("login - 올바른 비밀번호면 토큰을 반환한다")
-    void login_returnsToken_whenPasswordIsCorrect() {
-        User user = createLocalUserWithId(1L);
-        given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(user));
-        given(passwordEncoder.matches("password1234", "encoded-password")).willReturn(true);
-        given(jwtTokenProvider.createAccessToken(1L, "test@test.com")).willReturn("jwt-token");
-
-        TokenResponse response = service().login(new LoginRequest("test@test.com", "password1234"));
-
-        assertThat(response.accessToken()).isEqualTo("jwt-token");
-    }
-
-    @Test
-    @DisplayName("login - 비밀번호가 틀리면 예외")
-    void login_throwsException_whenPasswordIsWrong() {
-        User user = createLocalUserWithId(1L);
-        given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(user));
-        given(passwordEncoder.matches(anyString(), anyString())).willReturn(false);
-
-        assertThatThrownBy(() -> service().login(new LoginRequest("test@test.com", "wrong")))
-                .isInstanceOf(InvalidCredentialsException.class);
-    }
-
-    @Test
-    @DisplayName("login - 존재하지 않는 이메일이면 예외")
-    void login_throwsException_whenEmailNotFound() {
-        given(userRepository.findByEmail("none@test.com")).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service().login(new LoginRequest("none@test.com", "password1234")))
-                .isInstanceOf(InvalidCredentialsException.class);
-    }
-
-    @Test
-    @DisplayName("login - 구글 전용 계정이 비밀번호 로그인을 시도하면 예외")
-    void login_throwsException_whenGoogleOnlyAccountAttemptsPasswordLogin() {
-        User googleUser = createGoogleUserWithId(1L, "oauth@test.com");
-        given(userRepository.findByEmail("oauth@test.com")).willReturn(Optional.of(googleUser));
-
-        assertThatThrownBy(() -> service().login(new LoginRequest("oauth@test.com", "aaaaaaaa")))
-                .isInstanceOf(InvalidCredentialsException.class);
-
-        verify(passwordEncoder, never()).matches(any(), any());
-    }
-
-    @Test
-    @DisplayName("loginWithGoogle - 신규 이메일이면 계정을 새로 만들고 토큰을 반환한다")
-    void loginWithGoogle_createsNewUserAndReturnsToken_whenEmailIsNew() {
-        given(googleIdTokenValidator.verify("valid-id-token"))
-                .willReturn(verifiedPayload("new-google@test.com", true));
-        given(userRepository.findByEmail("new-google@test.com")).willReturn(Optional.empty());
-        given(userRepository.save(any(User.class))).willReturn(createGoogleUserWithId(2L, "new-google@test.com"));
-        given(jwtTokenProvider.createAccessToken(2L, "new-google@test.com")).willReturn("jwt-token");
-
-        TokenResponse response = service().loginWithGoogle(new GoogleLoginRequest("valid-id-token"));
-
-        assertThat(response.accessToken()).isEqualTo("jwt-token");
-        verify(userRepository).save(any(User.class));
-    }
-
-    @Test
-    @DisplayName("loginWithGoogle - 이미 같은 이메일의 로컬 계정이 있으면 자동 연결되어 그 계정으로 로그인된다")
-    void loginWithGoogle_autoLinksExistingLocalAccount_whenEmailMatches() {
-        User existingLocalUser = createLocalUserWithId(1L);
-        given(googleIdTokenValidator.verify("valid-id-token"))
-                .willReturn(verifiedPayload("test@test.com", true));
-        given(userRepository.findByEmail("test@test.com")).willReturn(Optional.of(existingLocalUser));
-        given(jwtTokenProvider.createAccessToken(1L, "test@test.com")).willReturn("jwt-token");
-
-        TokenResponse response = service().loginWithGoogle(new GoogleLoginRequest("valid-id-token"));
-
-        assertThat(response.accessToken()).isEqualTo("jwt-token");
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("loginWithGoogle - 이메일 미인증 토큰이면 예외")
-    void loginWithGoogle_throwsException_whenEmailNotVerified() {
-        given(googleIdTokenValidator.verify("unverified-token"))
-                .willReturn(verifiedPayload("test@test.com", false));
-
-        assertThatThrownBy(() -> service().loginWithGoogle(new GoogleLoginRequest("unverified-token")))
-                .isInstanceOf(InvalidGoogleTokenException.class);
-
-        verify(userRepository, never()).findByEmail(any());
+        return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
     }
 }

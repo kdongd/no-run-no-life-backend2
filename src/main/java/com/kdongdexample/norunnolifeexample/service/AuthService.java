@@ -73,7 +73,9 @@ public class AuthService {
         String email = payload.getEmail();
         String googleUserId = payload.getSubject();
 
-        // DB 조회/저장만 트랜잭션으로 묶음 — 커넥션이 구글 호출 시간만큼 묶이지 않음
+        // 이메일이 같으면 기존 계정으로 로그인만 처리한다. provider/providerId는 갱신하지 않으므로
+        // LOCAL로 가입한 계정에 구글로 로그인해도 그 계정의 provider는 계속 LOCAL로 남는다.
+        // (실제 계정 연동은 아직 미구현 — 카카오/네이버 등 멀티프로바이더 설계 시 함께 처리 예정)
         User user = transactionTemplate.execute(status ->
                 userRepository.findByEmail(email)
                         .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)))
