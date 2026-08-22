@@ -54,6 +54,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
+        // OAuth 전용 계정(비밀번호 없음)이 일반 로그인을 시도하는 경우 방어
         if (!user.hasPassword() || !passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new InvalidCredentialsException();
         }
