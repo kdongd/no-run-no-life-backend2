@@ -44,6 +44,9 @@ class WorkoutControllerTest {
     @Autowired
     ObjectMapper objectMapper;
 
+    @Autowired
+    JwtTokenProvider jwtTokenProvider;
+
     @MockitoBean
     WorkoutService service;
 
@@ -62,6 +65,31 @@ class WorkoutControllerTest {
 
         mockMvc.perform(get("/workouts").with(authentication(authAs(1L))))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /workouts 인증 정보 없이 요청하면 401을 반환한다")
+    void getWorkouts_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/workouts"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("GET /workouts 실제 발급된 JWT를 Authorization 헤더로 보내면 JwtAuthenticationFilter가 토큰을 파싱해서 인증을 통과시킨다")
+    void getWorkouts_withRealJwtToken_authenticatesThroughFilterChain() throws Exception {
+        String token = jwtTokenProvider.createAccessToken(1L, "test@test.com");
+        given(service.search(any(), any(), any(), any(), any()))
+                .willReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/workouts").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /workouts 유효하지 않은(서명이 깨진) JWT를 보내면 401을 반환한다")
+    void getWorkouts_withInvalidJwtToken_returns401() throws Exception {
+        mockMvc.perform(get("/workouts").header("Authorization", "Bearer not-a-valid-jwt"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

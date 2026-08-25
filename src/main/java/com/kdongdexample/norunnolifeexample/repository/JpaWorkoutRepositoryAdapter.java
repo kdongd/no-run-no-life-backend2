@@ -67,6 +67,9 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
 
     private Specification<Workout> buildSortSpecification(Sort sort) {
         return (root, query, cb) -> {
+            // count 쿼리(결과 타입이 Long)에는 정렬을 적용하지 않는다.
+            // query.orderBy()가 count 쿼리에도 호출되면 SQL이 깨지거나
+            // 결과가 왜곡될 수 있어(예: LIMIT과 무관하게 totalElements가 틀어짐).
             if (Long.class.equals(query.getResultType())) {
                 return cb.conjunction();
             }

@@ -122,6 +122,16 @@ class WorkoutServiceTest {
     }
 
     @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 조회하려 하면 WorkoutNotFoundException이 발생한다 (존재는 하지만 접근 권한이 없다는 사실 자체를 노출하지 않음)")
+    void findById_otherUsersWorkout_throwsWorkoutNotFoundException() {
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(workout));
+
+        assertThatThrownBy(() -> service().findById(1L, 2L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 id 삭제 시 WorkoutNotFoundException 발생")
     void delete_notFound() {
         given(repository.findById(999L)).willReturn(Optional.empty());
@@ -131,13 +141,26 @@ class WorkoutServiceTest {
     }
 
     @Test
-    @DisplayName("존재하는 id 삭제 성공")
+    @DisplayName("존재하는 id 삭제 성공 시 repository.delete()가 실제로 호출된다")
     void delete_success() {
         RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(workout));
 
-        assertThatCode(() -> service().delete(1L, 1L))
-                .doesNotThrowAnyException();
+        service().delete(1L, 1L);
+
+        verify(repository).delete(workout);
+    }
+
+    @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 삭제하려 하면 WorkoutNotFoundException이 발생하고 실제 삭제는 호출되지 않는다")
+    void delete_otherUsersWorkout_throwsWorkoutNotFoundExceptionAndDoesNotDelete() {
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(workout));
+
+        assertThatThrownBy(() -> service().delete(1L, 2L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+
+        verify(repository, never()).delete(any());
     }
 
     @Test
@@ -150,6 +173,20 @@ class WorkoutServiceTest {
                 null, null, null);
 
         assertThatThrownBy(() -> service().update(999L, form, 1L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 수정하려 하면 WorkoutNotFoundException이 발생한다")
+    void update_otherUsersWorkout_throwsWorkoutNotFoundException() {
+        RunningWorkout existing = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(existing));
+        WorkoutForm form = new WorkoutForm(
+                WorkoutType.RUNNING, 30, "메모", now, null,
+                5.0, "한강", 300,
+                null, null, null);
+
+        assertThatThrownBy(() -> service().update(1L, form, 2L))
                 .isInstanceOf(WorkoutNotFoundException.class);
     }
 

@@ -36,10 +36,12 @@ class WorkoutRepositoryTest {
     UserRepository userRepository;
 
     private User owner;
+    private User otherOwner;
 
     @BeforeEach
     void setUpOwner() {
         owner = userRepository.save(User.create("test@test.com", "encoded-password"));
+        otherOwner = userRepository.save(User.create("other@test.com", "encoded-password"));
     }
 
     @Test
@@ -173,5 +175,17 @@ class WorkoutRepositoryTest {
                 .findFirst()
                 .orElseThrow();
         assertThat(runningStat.count()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("statsByType는 다른 회원의 기록을 집계에 포함하지 않는다 (유저 1명으로는 증명 불가능하던 격리를 검증)")
+    void statsByType_excludesOtherOwnersRecords() {
+        jpaWorkoutRepository.save(RunningWorkout.create(owner, 30, "내 기록", LocalDateTime.now(), 5.0, "한강", 300));
+        jpaWorkoutRepository.save(BoxingWorkout.create(otherOwner, 60, "남의 기록", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING));
+
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner, null, null);
+
+        assertThat(stats).extracting(WorkoutStatByType::type).containsExactly(WorkoutType.RUNNING);
+        assertThat(stats).noneMatch(s -> s.type() == WorkoutType.BOXING);
     }
 }
