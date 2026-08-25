@@ -142,4 +142,5 @@ public class WorkoutService {
             throw new WorkoutNotFoundException(workout.getId());
         }
     }
+
 }

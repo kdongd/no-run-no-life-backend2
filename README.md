@@ -306,4 +306,4 @@ H2 콘솔(`http://localhost:8080/h2-console`)도 활성화되어 있지만, 실�
 | 챌린지 & 배지 시스템 | Redis Sorted Set, 이벤트 기반 처리 | 상 |
 | 오운완 기록 공유 | Web Share API (모바일 브라우저 네이티브 공유 시트) — 기획 초안의 Instagram Graph API/Stories 연동은 개인 계정 스토리 공유 용도로는 부적합해 웹 표준 API로 방향 수정 |
 
-전체 기획안 및 마일스톤은 별도 문서 참고.
+전체 기획안 및 마일스톤은 별도 문서 참고
