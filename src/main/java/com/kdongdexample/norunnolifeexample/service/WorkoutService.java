@@ -10,6 +10,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutForm;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
+import com.kdongdexample.norunnolifeexample.exception.AuthenticatedUserNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
@@ -134,7 +135,7 @@ public class WorkoutService {
 
     private User resolveOwner(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalStateException("인증된 사용자를 찾을 수 없습니다. id: " + userId));
+                .orElseThrow(() -> new AuthenticatedUserNotFoundException(userId));
     }
 
     private void validateOwner(Workout workout, Long userId) {
@@ -142,5 +143,4 @@ public class WorkoutService {
             throw new WorkoutNotFoundException(workout.getId());
         }
     }
-
 }
