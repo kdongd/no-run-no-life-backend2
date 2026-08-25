@@ -13,6 +13,7 @@ import com.kdongdexample.norunnolifeexample.exception.InvalidGoogleTokenExceptio
 import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.security.GoogleIdTokenValidator;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -47,7 +48,15 @@ public class AuthService {
             throw new EmailAlreadyExistsException(request.email());
         }
         User user = User.create(request.email(), passwordEncoder.encode(request.password()));
-        userRepository.save(user);
+
+        // existsByEmail() 체크와 save() 사이에 동시에 같은 이메일로 가입 요청이 들어오면
+        // 여기서도 통과해버릴 수 있음(원자적이지 않음). saveAndFlush()로 즉시 flush시켜
+        // DB의 email unique 제약 위반을 이 자리에서 동기적으로 받아 409로 통일한다.
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException e) {
+            throw new EmailAlreadyExistsException(request.email());
+        }
     }
 
     public TokenResponse login(LoginRequest request) {
