@@ -28,11 +28,11 @@
 
 ## ⚙️ 실행 방법
 
-로컬에 MySQL이 떠 있어야 하고, `norunnolife` 데이터베이스와 접속 계정이 필요합니다. `spring.datasource.username`/`password`는 `application.yml`에서 환경변수 `DB_USERNAME`/`DB_PASSWORD`로 주입받으므로, 실행 전에 값을 설정해야 합니다. (`JWT_SECRET`, `GOOGLE_CLIENT_ID`는 `application.yml`에 로컬 개발용 기본값이 들어 있어 생략해도 서버는 뜨지만, `JWT_SECRET`은 운영 배포 전 반드시 별도 값으로 교체해야 하고 `GOOGLE_CLIENT_ID`는 플레이스홀더라 실제 Google 로그인은 동작하지 않습니다.)
+로컬에 MySQL이 떠 있어야 하고, `norunnolife` 데이터베이스와 접속 계정이 필요합니다. `spring.datasource.username`/`password`는 `application.yml`에서 환경변수 `DB_USERNAME`/`DB_PASSWORD`로 주입받으므로, 실행 전에 값을 설정해야 합니다. `JWT_SECRET`은 기본값이 없어 반드시 직접 설정해야 하며(미설정 시 서버가 부팅되지 않습니다), `GOOGLE_CLIENT_ID`는 `application.yml`에 로컬 개발용 플레이스홀더가 들어 있어 생략해도 서버는 뜨지만 실제 Google 로그인은 동작하지 않습니다.
 
     export DB_USERNAME=your_db_user
     export DB_PASSWORD=your_db_password
-    export JWT_SECRET=your_jwt_secret          # 선택, 미설정 시 기본값(로컬 전용) 사용
+    export JWT_SECRET=your_jwt_secret          # 필수, 미설정 시 서버 부팅 실패
     export GOOGLE_CLIENT_ID=your_google_client_id   # 선택, Google 로그인 테스트 시 필수
     ./gradlew bootRun
 
