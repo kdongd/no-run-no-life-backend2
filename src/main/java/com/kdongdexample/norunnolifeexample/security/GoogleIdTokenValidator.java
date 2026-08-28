@@ -4,12 +4,17 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
+import com.kdongdexample.norunnolifeexample.exception.GoogleVerificationUnavailableException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidGoogleTokenException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Collections;
 
+@Slf4j
 @Component
 public class GoogleIdTokenValidator {
 
@@ -25,11 +30,15 @@ public class GoogleIdTokenValidator {
         GoogleIdToken idToken;
         try {
             idToken = verifier.verify(idTokenString);
-        } catch (Exception e) {
-            // 구글 라이브러리는 토큰 형식이 잘못됐을 때 IllegalArgumentException(unchecked)을 던지기도 하고,
-            // 서명/네트워크 문제일 땐 GeneralSecurityException, IOException(checked)을 던지기도 함.
-            // 원인이 뭐가 됐든 "유효하지 않은 구글 토큰"으로 취급해서 401로 응답해야 하므로 넓게 catch.
+        } catch (IllegalArgumentException e) {
+            // 토큰 문자열 자체가 JWT 형식이 아님 -> 클라이언트가 보낸 값의 문제, 401 유지
             throw new InvalidGoogleTokenException();
+        } catch (GeneralSecurityException | IOException e) {
+            // 서명 검증 과정(구글 공개키 서버 조회 등)에서 나는 인프라/네트워크 문제.
+            // 클라이언트의 토큰이 잘못된 게 아니라 우리 서버가 검증을 못 끝낸 것이므로
+            // 401이 아니라 5xx로 응답하고, 원인 추적을 위해 로그를 남긴다.
+            log.error("구글 ID 토큰 검증 실패 - 외부 인프라(구글 공개키 서버 등) 문제로 추정", e);
+            throw new GoogleVerificationUnavailableException();
         }
 
         if (idToken == null) {
