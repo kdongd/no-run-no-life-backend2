@@ -65,7 +65,7 @@ class JpaWorkoutRepositoryAdapterTest {
 
         // when
         Page<Workout> result = adapter.search(
-                owner, null, null, null,
+                owner.getId(), null, null, null,
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "distanceKm")));
 
         // then
@@ -89,7 +89,7 @@ class JpaWorkoutRepositoryAdapterTest {
 
         // when
         Page<Workout> result = adapter.search(
-                owner, null, null, null,
+                owner.getId(), null, null, null,
                 PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "distanceKm")));
 
         // then
@@ -105,7 +105,7 @@ class JpaWorkoutRepositoryAdapterTest {
         adapter.save(RunningWorkout.create(owner, 30, "내 기록2", LocalDateTime.now(), 5.0, "한강", 300));
         adapter.save(BoxingWorkout.create(otherOwner, 60, "남의 기록", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING));
 
-        Page<Workout> result = adapter.search(owner, null, null, null, PageRequest.of(0, 10));
+        Page<Workout> result = adapter.search(owner.getId(), null, null, null, PageRequest.of(0, 10));
 
         assertThat(result.getTotalElements()).isEqualTo(2);
         assertThat(result.getContent()).allMatch(w -> w.getOwner().equals(owner));
