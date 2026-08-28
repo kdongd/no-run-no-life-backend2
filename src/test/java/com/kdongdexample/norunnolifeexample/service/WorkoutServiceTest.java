@@ -255,8 +255,8 @@ class WorkoutServiceTest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("workoutDateTime"));
         RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         Page<Workout> page = new PageImpl<>(List.of(workout));
-        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(queryRepository.search(owner, WorkoutType.RUNNING, null, null, pageable)).willReturn(page);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.search(1L, WorkoutType.RUNNING, null, null, pageable)).willReturn(page);
 
         Page<Workout> result = service().search(WorkoutType.RUNNING, null, null, pageable, 1L);
 
@@ -288,8 +288,8 @@ class WorkoutServiceTest {
     @DisplayName("타입별 통계는 queryRepository에 위임한다")
     void statsByType_delegatesToQueryRepository() {
         List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 3L, 90L));
-        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(queryRepository.statsByType(owner, null, null)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByType(1L, null, null)).willReturn(stats);
 
         List<WorkoutStatByType> result = service().statsByType(null, null, 1L);
 
@@ -301,8 +301,8 @@ class WorkoutServiceTest {
     @DisplayName("월별 통계는 queryRepository에 위임한다")
     void statsByMonth_delegatesToQueryRepository() {
         List<WorkoutMonthlyStat> stats = List.of(new WorkoutMonthlyStat(2026, 5, 4L));
-        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(queryRepository.statsByMonth(owner, null, null)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByMonth(1L, null, null)).willReturn(stats);
 
         List<WorkoutMonthlyStat> result = service().statsByMonth(null, null, 1L);
 
@@ -316,12 +316,12 @@ class WorkoutServiceTest {
         LocalDateTime from = LocalDateTime.of(2026, 5, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2026, 5, 31, 23, 59);
         List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 1L, 30L));
-        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
-        given(queryRepository.statsByType(owner, from, to)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByType(1L, from, to)).willReturn(stats);
 
         List<WorkoutStatByType> result = service().statsByType(from, to, 1L);
 
         assertThat(result).hasSize(1);
-        verify(queryRepository).statsByType(owner, from, to);
+        verify(queryRepository).statsByType(1L, from, to);
     }
 }
