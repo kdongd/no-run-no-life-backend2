@@ -1,6 +1,7 @@
 package com.kdongdexample.norunnolifeexample.controller;
 
 import com.kdongdexample.norunnolifeexample.config.SecurityConfig;
+import com.kdongdexample.norunnolifeexample.security.CustomAuthenticationEntryPoint;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
 import org.springframework.context.annotation.Import;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,9 +34,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
 @WebMvcTest(WorkoutController.class)
-@Import({SecurityConfig.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtTokenProvider.class, CustomAuthenticationEntryPoint.class})
 class WorkoutControllerTest {
 
     @Autowired

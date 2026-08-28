@@ -9,6 +9,7 @@ import com.kdongdexample.norunnolifeexample.dto.TokenResponse;
 import com.kdongdexample.norunnolifeexample.exception.EmailAlreadyExistsException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidCredentialsException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidGoogleTokenException;
+import com.kdongdexample.norunnolifeexample.security.CustomAuthenticationEntryPoint;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
 import com.kdongdexample.norunnolifeexample.service.AuthService;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtTokenProvider.class, CustomAuthenticationEntryPoint.class})
 class AuthControllerTest {
 
     @Autowired

@@ -20,9 +20,17 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.Optional;
+
 @Service
 @Transactional(readOnly = true)
 public class AuthService {
+
+    // 계정이 없거나(OAuth 전용 계정 포함) 비밀번호 자체가 없는 경우에도 matches()를
+    // 동일하게 한 번 호출시켜서 걸리는 시간을 맞추기 위한 더미 해시.
+    // 실제 어떤 계정의 비밀번호도 아니고, BCrypt 연산 시간을 채우는 용도로만 쓴다.
+    private static final String DUMMY_PASSWORD_HASH =
+            "$2b$10$VNV8QWPKZdi5BrXTpnILDeHthOkTomdS2EezISxvZ1M37S3k.l..q";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -49,9 +57,6 @@ public class AuthService {
         }
         User user = User.create(request.email(), passwordEncoder.encode(request.password()));
 
-        // existsByEmail() 체크와 save() 사이에 동시에 같은 이메일로 가입 요청이 들어오면
-        // 여기서도 통과해버릴 수 있음(원자적이지 않음). saveAndFlush()로 즉시 flush시켜
-        // DB의 email unique 제약 위반을 이 자리에서 동기적으로 받아 409로 통일한다.
         try {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException e) {
@@ -60,18 +65,27 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(InvalidCredentialsException::new);
+        Optional<User> maybeUser = userRepository.findByEmail(request.email());
 
-        // OAuth 전용 계정(비밀번호 없음)이 일반 로그인을 시도하는 경우 방어
-        if (!user.hasPassword() || !passwordEncoder.matches(request.password(), user.getPassword())) {
+        // 계정이 없거나(Optional.empty) OAuth 전용 계정(비밀번호 없음)이어도 더미 해시로
+        // matches()를 동일하게 호출해서, "계정이 있고 비밀번호만 틀린 경우"와 걸리는 시간을
+        // 맞춘다. 그렇지 않으면 메시지는 통일해놔도 응답 시간만으로 "이 이메일이 LOCAL
+        // 계정으로 존재하는지"가 새어나간다(타이밍 사이드채널).
+        String hashToCheck = maybeUser
+                .filter(User::hasPassword)
+                .map(User::getPassword)
+                .orElse(DUMMY_PASSWORD_HASH);
+
+        boolean passwordMatches = passwordEncoder.matches(request.password(), hashToCheck);
+
+        if (maybeUser.isEmpty() || !maybeUser.get().hasPassword() || !passwordMatches) {
             throw new InvalidCredentialsException();
         }
 
+        User user = maybeUser.get();
         return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
     }
 
-    // @Transactional 제거 — 구글 네트워크 호출이 트랜잭션(=DB 커넥션 점유) 밖에서 실행되게 함
     public TokenResponse loginWithGoogle(GoogleLoginRequest request) {
         GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
 
@@ -82,9 +96,6 @@ public class AuthService {
         String email = payload.getEmail();
         String googleUserId = payload.getSubject();
 
-        // 이메일이 같으면 기존 계정으로 로그인만 처리한다. provider/providerId는 갱신하지 않으므로
-        // LOCAL로 가입한 계정에 구글로 로그인해도 그 계정의 provider는 계속 LOCAL로 남는다.
-        // (실제 계정 연동은 아직 미구현 — 카카오/네이버 등 멀티프로바이더 설계 시 함께 처리 예정)
         User user = transactionTemplate.execute(status ->
                 userRepository.findByEmail(email)
                         .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)))

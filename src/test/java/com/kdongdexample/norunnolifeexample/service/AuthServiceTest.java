@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -46,9 +47,6 @@ class AuthServiceTest {
     @Mock
     private GoogleIdTokenValidator googleIdTokenValidator;
 
-    // loginWithGoogle 내부에서 TransactionTemplate으로 감싸는 DB 처리 구간(findByEmail/save)에 필요.
-    // 스텁 없이 그대로 둬도 TransactionTemplate.execute()가 getTransaction()/commit()을 호출은 하지만
-    // Mockito 기본 동작(unstubbed 메서드는 null 반환/no-op)만으로 콜백이 정상 실행된다.
     @Mock
     private PlatformTransactionManager transactionManager;
 
@@ -87,7 +85,7 @@ class AuthServiceTest {
         service().signup(new SignupRequest("new@test.com", "password1234"));
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
+        verify(userRepository).saveAndFlush(captor.capture());
         User saved = captor.getValue();
         assertThat(saved.getEmail()).isEqualTo("new@test.com");
         assertThat(saved.getPassword()).isEqualTo("encoded-password");
@@ -131,6 +129,17 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("존재하지 않는 이메일이어도 타이밍 사이드채널 방지를 위해 matches()가 더미 해시로 호출된다")
+    void login_userNotFound_stillCallsPasswordEncoderForTimingSafety() {
+        given(userRepository.findByEmail("none@test.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service().login(new LoginRequest("none@test.com", "password1234")))
+                .isInstanceOf(InvalidCredentialsException.class);
+
+        verify(passwordEncoder).matches(eq("password1234"), any());
+    }
+
+    @Test
     @DisplayName("비밀번호가 일치하지 않으면 InvalidCredentialsException이 발생한다")
     void login_wrongPassword_throwsInvalidCredentialsException() {
         User user = createLocalUserWithId(1L, "user@test.com", "encoded-password");
@@ -142,15 +151,15 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("비밀번호가 없는 OAuth 전용 계정으로 로그인 시도하면 matches()를 호출하지 않고 InvalidCredentialsException이 발생한다")
-    void login_oauthOnlyAccount_throwsWithoutCallingPasswordEncoder() {
+    @DisplayName("비밀번호가 없는 OAuth 전용 계정으로 로그인 시도해도 타이밍 사이드채널 방지를 위해 matches()가 더미 해시로 호출되고, InvalidCredentialsException이 발생한다")
+    void login_oauthOnlyAccount_stillCallsPasswordEncoderForTimingSafety_throwsInvalidCredentials() {
         User oauthUser = createGoogleUserWithId(1L, "oauth@test.com", "google-sub-1");
         given(userRepository.findByEmail("oauth@test.com")).willReturn(Optional.of(oauthUser));
 
         assertThatThrownBy(() -> service().login(new LoginRequest("oauth@test.com", "aaaaaaaa")))
                 .isInstanceOf(InvalidCredentialsException.class);
 
-        verify(passwordEncoder, never()).matches(any(), any());
+        verify(passwordEncoder).matches(eq("aaaaaaaa"), any());
     }
 
     // ===== loginWithGoogle =====
@@ -173,7 +182,6 @@ class AuthServiceTest {
         assertThat(captor.getValue().getProvider()).isEqualTo(AuthProvider.GOOGLE);
         assertThat(captor.getValue().getProviderId()).isEqualTo("google-sub-2");
 
-        // DB 처리(findByEmail/save)가 TransactionTemplate으로 감싸진 트랜잭션 안에서 실행됐는지 확인
         verify(transactionManager).getTransaction(any());
         verify(transactionManager).commit(any());
     }
@@ -191,7 +199,6 @@ class AuthServiceTest {
 
         assertThat(response.accessToken()).isEqualTo("existing-access-token");
         verify(userRepository, never()).save(any());
-        // provider/providerId를 갱신하지 않으므로 LOCAL로 가입한 계정은 구글 로그인 후에도 계속 LOCAL로 남는다
         assertThat(existing.getProvider()).isEqualTo(AuthProvider.LOCAL);
     }
 
