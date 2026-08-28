@@ -1,6 +1,7 @@
 package com.kdongdexample.norunnolifeexample.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,11 +42,19 @@ public class JwtTokenProvider {
     }
 
     public boolean isValid(String token) {
+        return validate(token) == TokenStatus.VALID;
+    }
+
+    // 토큰이 무효인 "이유"를 구분해야 하는 곳(JwtAuthenticationFilter 등)에서 사용.
+    // 만료(EXPIRED)와 그 외 무효(서명 불일치/형식 오류 등, INVALID)를 구분한다.
+    public TokenStatus validate(String token) {
         try {
             parseClaims(token);
-            return true;
+            return TokenStatus.VALID;
+        } catch (ExpiredJwtException e) {
+            return TokenStatus.EXPIRED;
         } catch (Exception e) {
-            return false;
+            return TokenStatus.INVALID;
         }
     }
 

@@ -26,10 +26,26 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
 
+        TokenStatus tokenStatus = (TokenStatus) request.getAttribute(JwtAuthenticationFilter.TOKEN_ERROR_ATTRIBUTE);
+
+        String errorCode;
+        String message;
+        if (tokenStatus == TokenStatus.EXPIRED) {
+            errorCode = "TOKEN_EXPIRED";
+            message = "인증이 만료되었습니다.";
+        } else if (tokenStatus == TokenStatus.INVALID) {
+            errorCode = "TOKEN_INVALID";
+            message = "유효하지 않은 인증 정보입니다.";
+        } else {
+            errorCode = "TOKEN_MISSING";
+            message = "인증이 필요합니다.";
+        }
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
-                "인증이 필요합니다.",
-                List.of()
+                message,
+                List.of(),
+                errorCode
         );
 
         response.setStatus(HttpStatus.UNAUTHORIZED.value());

@@ -13,6 +13,10 @@ import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    // CustomAuthenticationEntryPoint가 "왜" 인증에 실패했는지(만료/무효) 읽어갈 수 있게
+    // 요청 attribute로 남겨두는 키. 토큰이 아예 없는 경우엔 이 attribute 자체가 없다 -> TOKEN_MISSING으로 구분.
+    public static final String TOKEN_ERROR_ATTRIBUTE = "jwt_token_error";
+
     private static final String PREFIX = "Bearer ";
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -27,10 +31,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (token != null && jwtTokenProvider.isValid(token)) {
-            Long userId = jwtTokenProvider.getUserId(token);
-            var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (token != null) {
+            TokenStatus status = jwtTokenProvider.validate(token);
+            if (status == TokenStatus.VALID) {
+                Long userId = jwtTokenProvider.getUserId(token);
+                var authentication = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } else {
+                request.setAttribute(TOKEN_ERROR_ATTRIBUTE, status);
+            }
         }
 
         filterChain.doFilter(request, response);
