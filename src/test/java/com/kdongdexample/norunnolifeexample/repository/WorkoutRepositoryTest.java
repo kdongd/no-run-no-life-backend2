@@ -130,7 +130,7 @@ class WorkoutRepositoryTest {
         BoxingWorkout workout = BoxingWorkout.create(owner, null, "메모", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING);
         jpaWorkoutRepository.save(workout);
 
-        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner, null, null);
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner.getId(), null, null);
 
         WorkoutStatByType boxingStat = stats.stream()
                 .filter(s -> s.type() == WorkoutType.BOXING)
@@ -147,7 +147,7 @@ class WorkoutRepositoryTest {
         jpaWorkoutRepository.save(RunningWorkout.create(owner, 30, "2", LocalDateTime.of(2026, 5, 20, 9, 0), 5.0, "한강", 300));
         jpaWorkoutRepository.save(BoxingWorkout.create(owner, 60, "3", LocalDateTime.of(2026, 6, 1, 9, 0), 3, "파트너", TechniqueType.SPARRING));
 
-        List<WorkoutMonthlyStat> stats = jpaWorkoutRepository.statsByMonth(owner, null, null);
+        List<WorkoutMonthlyStat> stats = jpaWorkoutRepository.statsByMonth(owner.getId(), null, null);
 
         WorkoutMonthlyStat may = stats.stream()
                 .filter(s -> s.year() == 2026 && s.month() == 5)
@@ -168,7 +168,7 @@ class WorkoutRepositoryTest {
         jpaWorkoutRepository.save(RunningWorkout.create(owner, 30, "이전", LocalDateTime.of(2026, 4, 1, 0, 0), 5.0, "한강", 300));
         jpaWorkoutRepository.save(RunningWorkout.create(owner, 30, "이후", LocalDateTime.of(2026, 6, 1, 0, 0), 5.0, "한강", 300));
 
-        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner, LocalDateTime.of(2026, 5, 1, 0, 0), null);
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner.getId(), LocalDateTime.of(2026, 5, 1, 0, 0), null);
 
         WorkoutStatByType runningStat = stats.stream()
                 .filter(s -> s.type() == WorkoutType.RUNNING)
@@ -183,7 +183,7 @@ class WorkoutRepositoryTest {
         jpaWorkoutRepository.save(RunningWorkout.create(owner, 30, "내 기록", LocalDateTime.now(), 5.0, "한강", 300));
         jpaWorkoutRepository.save(BoxingWorkout.create(otherOwner, 60, "남의 기록", LocalDateTime.now(), 3, "파트너", TechniqueType.SPARRING));
 
-        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner, null, null);
+        List<WorkoutStatByType> stats = jpaWorkoutRepository.statsByType(owner.getId(), null, null);
 
         assertThat(stats).extracting(WorkoutStatByType::type).containsExactly(WorkoutType.RUNNING);
         assertThat(stats).noneMatch(s -> s.type() == WorkoutType.BOXING);
