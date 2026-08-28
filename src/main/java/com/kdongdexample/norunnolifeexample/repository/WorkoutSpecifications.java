@@ -1,6 +1,5 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
-import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import org.springframework.data.jpa.domain.Specification;
@@ -11,8 +10,8 @@ public class WorkoutSpecifications {
 
     private WorkoutSpecifications() {}
 
-    public static Specification<Workout> hasOwner(User owner) {
-        return (root, query, cb) -> cb.equal(root.get("owner"), owner);
+    public static Specification<Workout> hasOwner(Long ownerId) {
+        return (root, query, cb) -> cb.equal(root.get("owner").get("id"), ownerId);
     }
 
     public static Specification<Workout> hasType(WorkoutType type) {

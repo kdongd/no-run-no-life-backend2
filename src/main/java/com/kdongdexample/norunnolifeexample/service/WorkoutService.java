@@ -111,8 +111,8 @@ public class WorkoutService {
 
     public Page<Workout> search(WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable, Long userId) {
         validateSort(pageable.getSort());
-        User owner = resolveOwner(userId);
-        return queryRepository.search(owner, type, from, to, pageable);
+        validateUserExists(userId);
+        return queryRepository.search(userId, type, from, to, pageable);
     }
 
     private void validateSort(Sort sort) {
@@ -124,18 +124,24 @@ public class WorkoutService {
     }
 
     public List<WorkoutStatByType> statsByType(LocalDateTime from, LocalDateTime to, Long userId) {
-        User owner = resolveOwner(userId);
-        return queryRepository.statsByType(owner, from, to);
+        validateUserExists(userId);
+        return queryRepository.statsByType(userId, from, to);
     }
 
     public List<WorkoutMonthlyStat> statsByMonth(LocalDateTime from, LocalDateTime to, Long userId) {
-        User owner = resolveOwner(userId);
-        return queryRepository.statsByMonth(owner, from, to);
+        validateUserExists(userId);
+        return queryRepository.statsByMonth(userId, from, to);
     }
 
     private User resolveOwner(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new AuthenticatedUserNotFoundException(userId));
+    }
+
+    private void validateUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new AuthenticatedUserNotFoundException(userId);
+        }
     }
 
     private void validateOwner(Workout workout, Long userId) {

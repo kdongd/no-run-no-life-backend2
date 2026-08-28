@@ -1,7 +1,6 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
 import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
-import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
@@ -50,8 +49,8 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public Page<Workout> search(User owner, WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
-        Specification<Workout> spec = buildSpecification(owner, type, from, to);
+    public Page<Workout> search(Long ownerId, WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable) {
+        Specification<Workout> spec = buildSpecification(ownerId, type, from, to);
 
         boolean needsCustomSort = pageable.getSort().stream()
                 .anyMatch(order -> SUBCLASS_SORT_PROPERTIES.contains(order.getProperty()));
@@ -97,9 +96,9 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
         };
     }
 
-    private Specification<Workout> buildSpecification(User owner, WorkoutType type, LocalDateTime from, LocalDateTime to) {
+    private Specification<Workout> buildSpecification(Long ownerId, WorkoutType type, LocalDateTime from, LocalDateTime to) {
         List<Specification<Workout>> specs = new ArrayList<>();
-        specs.add(WorkoutSpecifications.hasOwner(owner));
+        specs.add(WorkoutSpecifications.hasOwner(ownerId));
         if (type != null) specs.add(WorkoutSpecifications.hasType(type));
         if (from != null) specs.add(WorkoutSpecifications.fromDate(from));
         if (to != null) specs.add(WorkoutSpecifications.toDate(to));
@@ -110,12 +109,12 @@ public class JpaWorkoutRepositoryAdapter implements WorkoutRepository, WorkoutQu
     }
 
     @Override
-    public List<WorkoutStatByType> statsByType(User owner, LocalDateTime from, LocalDateTime to) {
-        return jpaWorkoutRepository.statsByType(owner, from, to);
+    public List<WorkoutStatByType> statsByType(Long ownerId, LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByType(ownerId, from, to);
     }
 
     @Override
-    public List<WorkoutMonthlyStat> statsByMonth(User owner, LocalDateTime from, LocalDateTime to) {
-        return jpaWorkoutRepository.statsByMonth(owner, from, to);
+    public List<WorkoutMonthlyStat> statsByMonth(Long ownerId, LocalDateTime from, LocalDateTime to) {
+        return jpaWorkoutRepository.statsByMonth(ownerId, from, to);
     }
 }

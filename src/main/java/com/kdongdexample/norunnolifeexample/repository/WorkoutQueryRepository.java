@@ -1,6 +1,5 @@
 package com.kdongdexample.norunnolifeexample.repository;
 
-import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutMonthlyStat;
@@ -12,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface WorkoutQueryRepository {
-    Page<Workout> search(User owner, WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable);
-    List<WorkoutStatByType> statsByType(User owner, LocalDateTime from, LocalDateTime to);
-    List<WorkoutMonthlyStat> statsByMonth(User owner, LocalDateTime from, LocalDateTime to);
+    Page<Workout> search(Long ownerId, WorkoutType type, LocalDateTime from, LocalDateTime to, Pageable pageable);
+    List<WorkoutStatByType> statsByType(Long ownerId, LocalDateTime from, LocalDateTime to);
+    List<WorkoutMonthlyStat> statsByMonth(Long ownerId, LocalDateTime from, LocalDateTime to);
 }
