@@ -10,9 +10,6 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
-  h2:
-    console:
-      enabled: ${H2_CONSOLE_ENABLED:false}
   data:
     web:
       pageable:
