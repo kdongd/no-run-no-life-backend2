@@ -45,4 +45,34 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), e.getMessage(), List.of());
         return ResponseEntity.badRequest().body(response);
     }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.CONFLICT.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(InvalidGoogleTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidGoogleToken(InvalidGoogleTokenException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(GoogleVerificationUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleGoogleVerificationUnavailable(GoogleVerificationUnavailableException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.SERVICE_UNAVAILABLE.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(AuthenticatedUserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticatedUserNotFound(AuthenticatedUserNotFoundException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
 }

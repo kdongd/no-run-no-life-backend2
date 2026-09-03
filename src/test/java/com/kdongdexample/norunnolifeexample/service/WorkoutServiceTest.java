@@ -1,8 +1,9 @@
 package com.kdongdexample.norunnolifeexample.service;
 
+import com.kdongdexample.norunnolifeexample.domain.TechniqueType;
 import com.kdongdexample.norunnolifeexample.domain.BoxingWorkout;
 import com.kdongdexample.norunnolifeexample.domain.RunningWorkout;
-import com.kdongdexample.norunnolifeexample.domain.TechniqueType;
+import com.kdongdexample.norunnolifeexample.domain.User;
 import com.kdongdexample.norunnolifeexample.domain.Workout;
 import com.kdongdexample.norunnolifeexample.domain.WorkoutType;
 import com.kdongdexample.norunnolifeexample.dto.WorkoutDetailForm;
@@ -12,6 +13,7 @@ import com.kdongdexample.norunnolifeexample.dto.WorkoutStatByType;
 import com.kdongdexample.norunnolifeexample.exception.InvalidSortPropertyException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.WorkoutTypeMismatchException;
+import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutQueryRepository;
 import com.kdongdexample.norunnolifeexample.repository.WorkoutRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +26,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,10 +47,21 @@ class WorkoutServiceTest {
     @Mock
     private WorkoutQueryRepository queryRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     private final LocalDateTime now = LocalDateTime.now();
 
+    private final User owner = createOwnerWithId(1L);
+
+    private static User createOwnerWithId(Long id) {
+        User user = User.create("test@test.com", "encoded-password");
+        ReflectionTestUtils.setField(user, "id", id);
+        return user;
+    }
+
     private WorkoutService service() {
-        return new WorkoutService(repository, queryRepository);
+        return new WorkoutService(repository, queryRepository, userRepository);
     }
 
     @Test
@@ -57,10 +71,11 @@ class WorkoutServiceTest {
                 WorkoutType.RUNNING, 30, "테스트 메모", now, null,
                 5.0, "한강", 300,
                 null, null, null);
-        RunningWorkout saved = RunningWorkout.create(30, "테스트 메모", now, 5.0, "한강", 300);
+        RunningWorkout saved = RunningWorkout.create(owner, 30, "테스트 메모", now, 5.0, "한강", 300);
+        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
         given(repository.save(any())).willReturn(saved);
 
-        Workout result = service().save(form);
+        Workout result = service().save(form, 1L);
 
         assertThat(result.getType()).isEqualTo(WorkoutType.RUNNING);
         assertThat(result.getDurationMinutes()).isEqualTo(30);
@@ -77,10 +92,11 @@ class WorkoutServiceTest {
                 WorkoutType.BOXING, 60, "메모", now, details,
                 null, null, null,
                 3, "파트너", TechniqueType.SPARRING);
-        BoxingWorkout saved = BoxingWorkout.create(60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
+        BoxingWorkout saved = BoxingWorkout.create(owner, 60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
+        given(userRepository.findById(1L)).willReturn(Optional.of(owner));
         given(repository.save(any())).willReturn(saved);
 
-        Workout result = service().save(form);
+        Workout result = service().save(form, 1L);
 
         assertThat(result.getType()).isEqualTo(WorkoutType.BOXING);
     }
@@ -88,10 +104,10 @@ class WorkoutServiceTest {
     @Test
     @DisplayName("존재하는 id 조회 성공")
     void findById_success() {
-        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(workout));
 
-        Workout result = service().findById(1L);
+        Workout result = service().findById(1L, 1L);
 
         assertThat(result.getType()).isEqualTo(WorkoutType.RUNNING);
     }
@@ -101,7 +117,17 @@ class WorkoutServiceTest {
     void findById_notFound() {
         given(repository.findById(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().findById(999L))
+        assertThatThrownBy(() -> service().findById(999L, 1L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 조회하려 하면 WorkoutNotFoundException이 발생한다 (존재는 하지만 접근 권한이 없다는 사실 자체를 노출하지 않음)")
+    void findById_otherUsersWorkout_throwsWorkoutNotFoundException() {
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(workout));
+
+        assertThatThrownBy(() -> service().findById(1L, 2L))
                 .isInstanceOf(WorkoutNotFoundException.class);
     }
 
@@ -110,18 +136,31 @@ class WorkoutServiceTest {
     void delete_notFound() {
         given(repository.findById(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().delete(999L))
+        assertThatThrownBy(() -> service().delete(999L, 1L))
                 .isInstanceOf(WorkoutNotFoundException.class);
     }
 
     @Test
-    @DisplayName("존재하는 id 삭제 성공")
+    @DisplayName("존재하는 id 삭제 성공 시 repository.delete()가 실제로 호출된다")
     void delete_success() {
-        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(workout));
 
-        assertThatCode(() -> service().delete(1L))
-                .doesNotThrowAnyException();
+        service().delete(1L, 1L);
+
+        verify(repository).delete(workout);
+    }
+
+    @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 삭제하려 하면 WorkoutNotFoundException이 발생하고 실제 삭제는 호출되지 않는다")
+    void delete_otherUsersWorkout_throwsWorkoutNotFoundExceptionAndDoesNotDelete() {
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(workout));
+
+        assertThatThrownBy(() -> service().delete(1L, 2L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+
+        verify(repository, never()).delete(any());
     }
 
     @Test
@@ -133,14 +172,28 @@ class WorkoutServiceTest {
                 5.0, "한강", 300,
                 null, null, null);
 
-        assertThatThrownBy(() -> service().update(999L, form))
+        assertThatThrownBy(() -> service().update(999L, form, 1L))
+                .isInstanceOf(WorkoutNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("다른 유저 소유의 운동 기록을 수정하려 하면 WorkoutNotFoundException이 발생한다")
+    void update_otherUsersWorkout_throwsWorkoutNotFoundException() {
+        RunningWorkout existing = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
+        given(repository.findById(1L)).willReturn(Optional.of(existing));
+        WorkoutForm form = new WorkoutForm(
+                WorkoutType.RUNNING, 30, "메모", now, null,
+                5.0, "한강", 300,
+                null, null, null);
+
+        assertThatThrownBy(() -> service().update(1L, form, 2L))
                 .isInstanceOf(WorkoutNotFoundException.class);
     }
 
     @Test
     @DisplayName("기존 타입과 다른 타입으로 수정 요청 시 WorkoutTypeMismatchException 발생")
     void update_typeMismatch_throwsException() {
-        RunningWorkout existing = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
+        RunningWorkout existing = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(existing));
 
         WorkoutForm form = new WorkoutForm(
@@ -148,14 +201,14 @@ class WorkoutServiceTest {
                 null, null, null,
                 3, "파트너", TechniqueType.SPARRING);
 
-        assertThatThrownBy(() -> service().update(1L, form))
+        assertThatThrownBy(() -> service().update(1L, form, 1L))
                 .isInstanceOf(WorkoutTypeMismatchException.class);
     }
 
     @Test
     @DisplayName("같은 타입으로 수정하면 필드가 갱신되고 저장된 엔티티를 반환한다")
     void update_success() {
-        RunningWorkout existing = RunningWorkout.create(30, "이전 메모", now, 5.0, "한강", 300);
+        RunningWorkout existing = RunningWorkout.create(owner, 30, "이전 메모", now, 5.0, "한강", 300);
         given(repository.findById(1L)).willReturn(Optional.of(existing));
 
         WorkoutForm form = new WorkoutForm(
@@ -163,7 +216,7 @@ class WorkoutServiceTest {
                 10.0, "남산", 500,
                 null, null, null);
 
-        Workout result = service().update(1L, form);
+        Workout result = service().update(1L, form, 1L);
 
         assertThat(result.getDurationMinutes()).isEqualTo(60);
         assertThat(result.getMemo()).isEqualTo("수정된 메모");
@@ -174,7 +227,7 @@ class WorkoutServiceTest {
     @Test
     @DisplayName("수정 시 details가 통째로 교체된다")
     void update_replacesDetails() {
-        BoxingWorkout existing = BoxingWorkout.create(60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
+        BoxingWorkout existing = BoxingWorkout.create(owner, 60, "메모", now, 3, "파트너", TechniqueType.SPARRING);
         WorkoutDetailForm oldDetailForm = new WorkoutDetailForm(1, "기존 라운드", 180, null);
         existing.addDetail(
                 com.kdongdexample.norunnolifeexample.domain.WorkoutDetail.create(
@@ -190,7 +243,7 @@ class WorkoutServiceTest {
                 null, null, null,
                 3, "파트너", TechniqueType.SPARRING);
 
-        Workout result = service().update(1L, form);
+        Workout result = service().update(1L, form, 1L);
 
         assertThat(result.getDetails()).hasSize(1);
         assertThat(result.getDetails().get(0).getLabel()).isEqualTo("새 라운드");
@@ -200,11 +253,12 @@ class WorkoutServiceTest {
     @DisplayName("허용된 정렬 필드로 검색하면 queryRepository.search()에 위임한다")
     void search_validSort_delegatesToQueryRepository() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("workoutDateTime"));
-        RunningWorkout workout = RunningWorkout.create(30, "메모", now, 5.0, "한강", 300);
+        RunningWorkout workout = RunningWorkout.create(owner, 30, "메모", now, 5.0, "한강", 300);
         Page<Workout> page = new PageImpl<>(List.of(workout));
-        given(queryRepository.search(WorkoutType.RUNNING, null, null, pageable)).willReturn(page);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.search(1L, WorkoutType.RUNNING, null, null, pageable)).willReturn(page);
 
-        Page<Workout> result = service().search(WorkoutType.RUNNING, null, null, pageable);
+        Page<Workout> result = service().search(WorkoutType.RUNNING, null, null, pageable, 1L);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getType()).isEqualTo(WorkoutType.RUNNING);
@@ -215,7 +269,7 @@ class WorkoutServiceTest {
     void search_invalidSort_throwsException() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("memo"));
 
-        assertThatThrownBy(() -> service().search(null, null, null, pageable))
+        assertThatThrownBy(() -> service().search(null, null, null, pageable, 1L))
                 .isInstanceOf(InvalidSortPropertyException.class);
     }
 
@@ -224,19 +278,20 @@ class WorkoutServiceTest {
     void search_invalidSort_doesNotCallRepository() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("id"));
 
-        assertThatThrownBy(() -> service().search(null, null, null, pageable))
+        assertThatThrownBy(() -> service().search(null, null, null, pageable, 1L))
                 .isInstanceOf(InvalidSortPropertyException.class);
 
-        verify(queryRepository, never()).search(any(), any(), any(), any());
+        verify(queryRepository, never()).search(any(), any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("타입별 통계는 queryRepository에 위임한다")
     void statsByType_delegatesToQueryRepository() {
         List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 3L, 90L));
-        given(queryRepository.statsByType(null, null)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByType(1L, null, null)).willReturn(stats);
 
-        List<WorkoutStatByType> result = service().statsByType(null, null);
+        List<WorkoutStatByType> result = service().statsByType(null, null, 1L);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).type()).isEqualTo(WorkoutType.RUNNING);
@@ -246,9 +301,10 @@ class WorkoutServiceTest {
     @DisplayName("월별 통계는 queryRepository에 위임한다")
     void statsByMonth_delegatesToQueryRepository() {
         List<WorkoutMonthlyStat> stats = List.of(new WorkoutMonthlyStat(2026, 5, 4L));
-        given(queryRepository.statsByMonth(null, null)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByMonth(1L, null, null)).willReturn(stats);
 
-        List<WorkoutMonthlyStat> result = service().statsByMonth(null, null);
+        List<WorkoutMonthlyStat> result = service().statsByMonth(null, null, 1L);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).year()).isEqualTo(2026);
@@ -260,11 +316,12 @@ class WorkoutServiceTest {
         LocalDateTime from = LocalDateTime.of(2026, 5, 1, 0, 0);
         LocalDateTime to = LocalDateTime.of(2026, 5, 31, 23, 59);
         List<WorkoutStatByType> stats = List.of(new WorkoutStatByType(WorkoutType.RUNNING, 1L, 30L));
-        given(queryRepository.statsByType(from, to)).willReturn(stats);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(queryRepository.statsByType(1L, from, to)).willReturn(stats);
 
-        List<WorkoutStatByType> result = service().statsByType(from, to);
+        List<WorkoutStatByType> result = service().statsByType(from, to, 1L);
 
         assertThat(result).hasSize(1);
-        verify(queryRepository).statsByType(from, to);
+        verify(queryRepository).statsByType(1L, from, to);
     }
 }

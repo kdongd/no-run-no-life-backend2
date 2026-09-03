@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -30,12 +29,19 @@ class WorkoutAuditingTest {
     @Autowired
     private EntityManager em;
 
+    private User persistOwner() {
+        User owner = User.create("test@test.com", "encoded-password");
+        em.persist(owner);
+        return owner;
+    }
+
     @Test
     @DisplayName("엔티티 저장 시 createdAt과 updatedAt이 자동으로 채워진다")
     void createdAtAndUpdatedAtAreSetOnPersist() {
         // given
+        User owner = persistOwner();
         RunningWorkout workout = RunningWorkout.create(
-                30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
+                owner, 30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
 
         // when
         em.persist(workout);
@@ -52,8 +58,9 @@ class WorkoutAuditingTest {
     @DisplayName("엔티티 수정 시 updatedAt만 갱신되고 createdAt은 유지된다")
     void updatedAtChangesButCreatedAtStaysOnModify() {
         // given
+        User owner = persistOwner();
         RunningWorkout workout = RunningWorkout.create(
-                30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
+                owner, 30, "메모", LocalDateTime.now(), 5.0, "한강", 300);
         em.persist(workout);
         em.flush();
         em.clear();

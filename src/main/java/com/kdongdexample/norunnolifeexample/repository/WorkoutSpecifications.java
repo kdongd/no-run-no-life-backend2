@@ -10,6 +10,10 @@ public class WorkoutSpecifications {
 
     private WorkoutSpecifications() {}
 
+    public static Specification<Workout> hasOwner(Long ownerId) {
+        return (root, query, cb) -> cb.equal(root.get("owner").get("id"), ownerId);
+    }
+
     public static Specification<Workout> hasType(WorkoutType type) {
         return (root, query, cb) -> cb.equal(root.get("type"), type);
     }

@@ -9,5 +9,5 @@ public class NorunnolifeexampleApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(NorunnolifeexampleApplication.class, args);
 	}
-
+	
 }

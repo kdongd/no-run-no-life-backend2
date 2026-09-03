@@ -18,17 +18,17 @@ public class RunningWorkout extends Workout {
     private String place;
     private Integer caloriesBurned;
 
-    private RunningWorkout(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+    private RunningWorkout(User owner, Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
                            Double distanceKm, String place, Integer caloriesBurned) {
-        super(WorkoutType.RUNNING, durationMinutes, memo, workoutDateTime);
+        super(owner, WorkoutType.RUNNING, durationMinutes, memo, workoutDateTime);
         this.distanceKm = distanceKm;
         this.place = place;
         this.caloriesBurned = caloriesBurned;
     }
 
-    public static RunningWorkout create(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
+    public static RunningWorkout create(User owner, Integer durationMinutes, String memo, LocalDateTime workoutDateTime,
                                         Double distanceKm, String place, Integer caloriesBurned) {
-        return new RunningWorkout(durationMinutes, memo, workoutDateTime, distanceKm, place, caloriesBurned);
+        return new RunningWorkout(owner, durationMinutes, memo, workoutDateTime, distanceKm, place, caloriesBurned);
     }
 
     public void update(Integer durationMinutes, String memo, LocalDateTime workoutDateTime,

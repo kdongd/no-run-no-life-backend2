@@ -24,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -51,9 +52,10 @@ public class WorkoutController {
             @Parameter(description = "운동 타입 필터") @RequestParam(required = false) WorkoutType type,
             @Parameter(description = "조회 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @Parameter(description = "조회 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
-            @Parameter(description = "페이지, 사이즈, 정렬 파라미터") @PageableDefault(size = 10, sort = "workoutDateTime", direction = Sort.Direction.DESC) Pageable pageable) {
+            @Parameter(description = "페이지, 사이즈, 정렬 파라미터") @PageableDefault(size = 10, sort = "workoutDateTime", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal Long userId) {
 
-        Page<WorkoutSummaryResponse> page = service.search(type, from, to, pageable)
+        Page<WorkoutSummaryResponse> page = service.search(type, from, to, pageable, userId)
                 .map(WorkoutSummaryResponse::from);
         return ResponseEntity.ok(PageResponse.from(page));
     }
@@ -65,8 +67,9 @@ public class WorkoutController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/workouts")
-    public ResponseEntity<WorkoutResponse> createWorkout(@Valid @RequestBody WorkoutForm form) {
-        Workout saved = service.save(form);
+    public ResponseEntity<WorkoutResponse> createWorkout(@Valid @RequestBody WorkoutForm form,
+                                                         @AuthenticationPrincipal Long userId) {
+        Workout saved = service.save(form, userId);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(saved.getId())
@@ -81,8 +84,9 @@ public class WorkoutController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/workouts/{id}")
-    public ResponseEntity<WorkoutResponse> getWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id) {
-        return ResponseEntity.ok(WorkoutResponse.from(service.findById(id)));
+    public ResponseEntity<WorkoutResponse> getWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id,
+                                                      @AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(WorkoutResponse.from(service.findById(id, userId)));
     }
 
     @Operation(summary = "운동 기록 수정", description = "id로 조회된 운동 기록을 수정한다. 타입은 변경할 수 없다")
@@ -95,8 +99,9 @@ public class WorkoutController {
     })
     @PutMapping("/workouts/{id}")
     public ResponseEntity<WorkoutResponse> updateWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id,
-                                                         @Valid @RequestBody WorkoutForm form) {
-        Workout updated = service.update(id, form);
+                                                         @Valid @RequestBody WorkoutForm form,
+                                                         @AuthenticationPrincipal Long userId) {
+        Workout updated = service.update(id, form, userId);
         return ResponseEntity.ok(WorkoutResponse.from(updated));
     }
 
@@ -107,8 +112,9 @@ public class WorkoutController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @DeleteMapping("/workouts/{id}")
-    public ResponseEntity<Void> deleteWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id) {
-        service.delete(id);
+    public ResponseEntity<Void> deleteWorkout(@Parameter(description = "운동 기록 id") @PathVariable Long id,
+                                              @AuthenticationPrincipal Long userId) {
+        service.delete(id, userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -117,8 +123,9 @@ public class WorkoutController {
     @GetMapping("/workouts/stats/by-type")
     public ResponseEntity<List<WorkoutStatByType>> getStatsByType(
             @Parameter(description = "집계 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(service.statsByType(from, to));
+            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(service.statsByType(from, to, userId));
     }
 
     @Operation(summary = "월별 통계 조회", description = "기간 내 연/월별 운동 건수를 조회한다. from/to 미지정 시 전체 기간 집계")
@@ -126,7 +133,8 @@ public class WorkoutController {
     @GetMapping("/workouts/stats/monthly")
     public ResponseEntity<List<WorkoutMonthlyStat>> getStatsByMonth(
             @Parameter(description = "집계 시작 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
-            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(service.statsByMonth(from, to));
+            @Parameter(description = "집계 종료 일시") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
+            @AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(service.statsByMonth(from, to, userId));
     }
 }
