@@ -133,7 +133,7 @@ public class AuthService {
         });
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public AuthTokens refresh(String rawRefreshToken) {
         String tokenHash = refreshTokenProvider.hash(rawRefreshToken);
         RefreshToken current = refreshTokenRepository.findByTokenHash(tokenHash)
