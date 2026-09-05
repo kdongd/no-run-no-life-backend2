@@ -23,6 +23,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -112,6 +113,15 @@ public class AuthService {
         return new AuthTokens(accessToken, refreshToken);
     }
 
+
+    // 현재 클래스 레벨이 @transactional(readOnly = true)인데, loginWithGoogle 에는 메서드 에노테이션이 없어서
+    // 프록시가 readOnly 트랙잭션을 열고 transactionTemplate.execute()는 기본 전파가 REQUIRED라
+    // 새 트랜잭션을 만드는 게 아니라 그 readOnly 트랜잭션에 참여 했었습니다.
+    // NOT_SUPPORTED 를 사용해서 이 메서드 진입 시점엔 트랜잭션을 아예 열지 않게 만들었습니다.
+    // googleIdTokenValidator.verify()는 구글 공개키 서버 조회 등 외부 네트워크 호출이 걸릴 수 있어서
+    // 이 구간을 트랜잭션에 묶어둘 이유가 없다고 생각했습니다.
+    // 실제 DB 조회/저장이 필요한 구간만 아래 transactionTemplate.execute()를 통해 쓰기 트랜잭션을 엽니다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthTokens loginWithGoogle(GoogleLoginRequest request) {
         GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
 
