@@ -2,25 +2,36 @@ package com.kdongdexample.norunnolifeexample.service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.kdongdexample.norunnolifeexample.domain.AuthProvider;
+import com.kdongdexample.norunnolifeexample.domain.RefreshToken;
 import com.kdongdexample.norunnolifeexample.domain.User;
+import com.kdongdexample.norunnolifeexample.dto.AuthTokens;
 import com.kdongdexample.norunnolifeexample.dto.GoogleLoginRequest;
 import com.kdongdexample.norunnolifeexample.dto.LoginRequest;
 import com.kdongdexample.norunnolifeexample.dto.SignupRequest;
-import com.kdongdexample.norunnolifeexample.dto.TokenResponse;
+import com.kdongdexample.norunnolifeexample.exception.AuthenticatedUserNotFoundException;
 import com.kdongdexample.norunnolifeexample.exception.EmailAlreadyExistsException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidCredentialsException;
 import com.kdongdexample.norunnolifeexample.exception.InvalidGoogleTokenException;
+import com.kdongdexample.norunnolifeexample.exception.InvalidRefreshTokenException;
+import com.kdongdexample.norunnolifeexample.repository.RefreshTokenRepository;
 import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.security.GoogleIdTokenValidator;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
+import com.kdongdexample.norunnolifeexample.security.RefreshTokenProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -37,17 +48,29 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final GoogleIdTokenValidator googleIdTokenValidator;
     private final TransactionTemplate transactionTemplate;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenProvider refreshTokenProvider;
+    private final long refreshTokenExpirationMs;
+    private final int maxRefreshTokensPerUser;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtTokenProvider jwtTokenProvider,
                        GoogleIdTokenValidator googleIdTokenValidator,
-                       PlatformTransactionManager transactionManager) {
+                       PlatformTransactionManager transactionManager,
+                       RefreshTokenRepository refreshTokenRepository,
+                       RefreshTokenProvider refreshTokenProvider,
+                       @Value("${jwt.refresh-token-expiration-ms}") long refreshTokenExpirationMs,
+                       @Value("${auth.max-refresh-tokens-per-user}") int maxRefreshTokensPerUser) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.googleIdTokenValidator = googleIdTokenValidator;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenProvider = refreshTokenProvider;
+        this.refreshTokenExpirationMs = refreshTokenExpirationMs;
+        this.maxRefreshTokensPerUser = maxRefreshTokensPerUser;
     }
 
     @Transactional
@@ -64,7 +87,8 @@ public class AuthService {
         }
     }
 
-    public TokenResponse login(LoginRequest request) {
+    @Transactional
+    public AuthTokens login(LoginRequest request) {
         Optional<User> maybeUser = userRepository.findByEmail(request.email());
 
         // 계정이 없거나(Optional.empty) OAuth 전용 계정(비밀번호 없음)이어도 더미 해시로
@@ -83,10 +107,22 @@ public class AuthService {
         }
 
         User user = maybeUser.get();
-        return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String refreshToken = issueRefreshToken(user.getId(), UUID.randomUUID().toString());
+
+        return new AuthTokens(accessToken, refreshToken);
     }
 
-    public TokenResponse loginWithGoogle(GoogleLoginRequest request) {
+
+    // 현재 클래스 레벨이 @transactional(readOnly = true)인데, loginWithGoogle 에는 메서드 에노테이션이 없어서
+    // 프록시가 readOnly 트랙잭션을 열고 transactionTemplate.execute()는 기본 전파가 REQUIRED라
+    // 새 트랜잭션을 만드는 게 아니라 그 readOnly 트랜잭션에 참여 했었습니다.
+    // NOT_SUPPORTED 를 사용해서 이 메서드 진입 시점엔 트랜잭션을 아예 열지 않게 만들었습니다.
+    // googleIdTokenValidator.verify()는 구글 공개키 서버 조회 등 외부 네트워크 호출이 걸릴 수 있어서
+    // 이 구간을 트랜잭션에 묶어둘 이유가 없다고 생각했습니다.
+    // 실제 DB 조회/저장이 필요한 구간만 아래 transactionTemplate.execute()를 통해 쓰기 트랜잭션을 엽니다.
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public AuthTokens loginWithGoogle(GoogleLoginRequest request) {
         GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
 
         if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
@@ -96,11 +132,78 @@ public class AuthService {
         String email = payload.getEmail();
         String googleUserId = payload.getSubject();
 
-        User user = transactionTemplate.execute(status ->
-                userRepository.findByEmail(email)
-                        .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)))
-        );
+        return transactionTemplate.execute(status -> {
+            User user = userRepository.findByEmail(email)
+                    .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)));
 
-        return TokenResponse.of(jwtTokenProvider.createAccessToken(user.getId(), user.getEmail()));
+            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+            String refreshToken = issueRefreshToken(user.getId(), UUID.randomUUID().toString());
+
+            return new AuthTokens(accessToken, refreshToken);
+        });
+    }
+
+    @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
+    public AuthTokens refresh(String rawRefreshToken) {
+        String tokenHash = refreshTokenProvider.hash(rawRefreshToken);
+        RefreshToken current = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(InvalidRefreshTokenException::new);
+
+        if (current.isRevoked()) {
+            // 폐기된 토큰이 다시 들어오는 경우 = 탈취되어 재사용된 것으로 간주합니다.
+            // 같은 tokenFamily(같은 세션/기기에서 나온 토큰들) 전체를 즉시 폐기해서
+            // 피해 범위를 그 세션 하나로 한정합니다. 다른 기기(다른 family)에는 영향이 가지 않습니다.
+            refreshTokenRepository.revokeAllByTokenFamily(current.getTokenFamily());
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (current.isExpired()) {
+            throw new InvalidRefreshTokenException();
+        }
+
+        // 지금 쓰인 토큰은 즉시 폐기하고 같은 family로 새 토큰을 발급합니다.
+        current.revoke();
+
+        User user = userRepository.findById(current.getUserId())
+                .orElseThrow(() -> new AuthenticatedUserNotFoundException(current.getUserId()));
+
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String newRefreshToken = issueRefreshToken(user.getId(), current.getTokenFamily());
+
+        return new AuthTokens(accessToken, newRefreshToken);
+    }
+
+    @Transactional
+    public void logout(String rawRefreshToken) {
+        String tokenHash = refreshTokenProvider.hash(rawRefreshToken);
+        refreshTokenRepository.findByTokenHash(tokenHash)
+                .ifPresent(RefreshToken::revoke);
+        // 토큰이 없거나 이미 폐기된 상태여도 에러를 내지 않습니다.
+    }
+
+    private String issueRefreshToken(Long userId, String tokenFamily) {
+        enforceDeviceLimit(userId);
+
+        String rawToken = refreshTokenProvider.generate();
+        String tokenHash = refreshTokenProvider.hash(rawToken);
+        LocalDateTime expiresAt = LocalDateTime.now().plus(Duration.ofMillis(refreshTokenExpirationMs));
+
+        RefreshToken refreshToken = RefreshToken.issue(userId, tokenHash, tokenFamily, expiresAt);
+        refreshTokenRepository.save(refreshToken);
+
+        return rawToken;
+    }
+
+    private void enforceDeviceLimit(Long userId) {
+        List<RefreshToken> activeTokens = refreshTokenRepository.findByUserIdAndRevokedFalseOrderByIssuedAtAsc(userId);
+        if (activeTokens.size() < maxRefreshTokensPerUser) {
+            return;
+        }
+        int excess = activeTokens.size() - maxRefreshTokensPerUser + 1;
+        for (int i = 0; i < excess; i++) {
+            activeTokens.get(i).revoke();
+        }
+        // activeTokens는 이 트랜잭션 안에서 조회된 영속 상태 엔티티라서 revoke() 호출만으로도
+        // 트랜잭션 시 변경된 부분이 자동으로 반영됩니다.
     }
 }

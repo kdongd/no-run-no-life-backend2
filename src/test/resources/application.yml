@@ -21,6 +21,10 @@ spring:
 jwt:
   secret: test-only-dummy-jwt-secret-never-use-in-production-32bytes-minimum-1234567890
   access-token-expiration-ms: 3600000
+  refresh-token-expiration-ms: 1209600000
+
+auth:
+  max-refresh-tokens-per-user: 5
 
 google:
   client-id: local-dev-placeholder-client-id
