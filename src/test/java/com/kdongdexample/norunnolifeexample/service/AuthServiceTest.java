@@ -201,7 +201,8 @@ class AuthServiceTest {
                 RefreshToken.issue(1L, "hash-4", "family-4", LocalDateTime.now().plusDays(1)),
                 RefreshToken.issue(1L, "hash-5", "family-5", LocalDateTime.now().plusDays(1))
         ));
-        given(refreshTokenRepository.findByUserIdAndRevokedFalseOrderByIssuedAtAsc(1L)).willReturn(activeTokens);
+        given(refreshTokenRepository.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByIssuedAtAsc(eq(1L), any(LocalDateTime.class)))
+                .willReturn(activeTokens);
 
         service().login(new LoginRequest("user@test.com", "password1234"));
 
