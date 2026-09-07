@@ -18,6 +18,7 @@ import com.kdongdexample.norunnolifeexample.repository.UserRepository;
 import com.kdongdexample.norunnolifeexample.security.GoogleIdTokenValidator;
 import com.kdongdexample.norunnolifeexample.security.JwtTokenProvider;
 import com.kdongdexample.norunnolifeexample.security.RefreshTokenProvider;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class AuthService {
@@ -156,6 +158,8 @@ public class AuthService {
             // 폐기된 토큰이 다시 들어오는 경우 = 탈취되어 재사용된 것으로 간주합니다.
             // 같은 tokenFamily(같은 세션/기기에서 나온 토큰들) 전체를 즉시 폐기해서
             // 피해 범위를 그 세션 하나로 한정합니다. 다른 기기(다른 family)에는 영향이 가지 않습니다.
+            log.warn("리프레시 토큰 재사용 탐지 - 해당 세션(tokenFamily={}, userId={}) 전체를 폐기합니다.",
+                    current.getTokenFamily(), current.getUserId());
             refreshTokenRepository.revokeAllByTokenFamily(current.getTokenFamily());
             throw new InvalidRefreshTokenException();
         }
@@ -199,7 +203,7 @@ public class AuthService {
 
     private void enforceDeviceLimit(Long userId) {
         // revokedFalse만 보고 만료 여부를 안 보면 만료된 지 오래된 토큰까지 활성 슬롯을
-        // 차지해서 진짜 활성 세션이 먼저 밀려날 수 있어서, 아직 만료 안 된
+        // 차지해서 진짜 활성 세션이 부당하게 먼저 밀려날 수 있어서, 아직 만료 안 된
         // 토큰만 세도록 expiresAt 조건이 들어간 쿼리로 교체했습니다.
         List<RefreshToken> activeTokens = refreshTokenRepository
                 .findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByIssuedAtAsc(userId, LocalDateTime.now());
