@@ -113,14 +113,13 @@ public class AuthService {
         return new AuthTokens(accessToken, refreshToken);
     }
 
-
-    // 현재 클래스 레벨이 @transactional(readOnly = true)인데, loginWithGoogle 에는 메서드 에노테이션이 없어서
-    // 프록시가 readOnly 트랙잭션을 열고 transactionTemplate.execute()는 기본 전파가 REQUIRED라
-    // 새 트랜잭션을 만드는 게 아니라 그 readOnly 트랜잭션에 참여 했었습니다.
-    // NOT_SUPPORTED 를 사용해서 이 메서드 진입 시점엔 트랜잭션을 아예 열지 않게 만들었습니다.
+    // 클래스 레벨 @Transactional(readOnly = true)을 이 메서드가 그대로 물려받으면, 아래
+    // transactionTemplate.execute()가 기본 전파(REQUIRED)일 때 그 readOnly 트랜잭션에 합류해버려서
+    // 신규 유저 저장(INSERT)이 read-only 커넥션 위에서 거부된다 (Post /auth/google 자체가 죽는 버그였음).
+    // NOT_SUPPORTED로 이 메서드 진입 시점엔 트랜잭션을 아예 열지 않게 만든다 — 어차피
     // googleIdTokenValidator.verify()는 구글 공개키 서버 조회 등 외부 네트워크 호출이 걸릴 수 있어서
-    // 이 구간을 트랜잭션에 묶어둘 이유가 없다고 생각했습니다.
-    // 실제 DB 조회/저장이 필요한 구간만 아래 transactionTemplate.execute()를 통해 쓰기 트랜잭션을 엽니다.
+    // 이 구간을 트랜잭션(=DB 커넥션 점유)에 묶어둘 이유가 없다. DB 조회/저장이 필요한 구간만
+    // 아래 transactionTemplate.execute()가 그 자리에서 새 트랜잭션을 연다.
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public AuthTokens loginWithGoogle(GoogleLoginRequest request) {
         GoogleIdToken.Payload payload = googleIdTokenValidator.verify(request.idToken());
@@ -146,7 +145,11 @@ public class AuthService {
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public AuthTokens refresh(String rawRefreshToken) {
         String tokenHash = refreshTokenProvider.hash(rawRefreshToken);
-        RefreshToken current = refreshTokenRepository.findByTokenHash(tokenHash)
+
+        // 동시 요청으로 인해 두 요청이 모두 revoked=false 상태를 읽어 재사용 탐지 무력화를 방지합니다.
+        // findByTokenHashForUpdate(PESSIMISTIC_WRITE)를 사용해 동일 토큰의 동시 접근시 나중 요청을 대기시키고
+        // 첫번째 트랜잭션이 완료된 후 최신 revoked 상태를 조회하도록 보장합니다.
+        RefreshToken current = refreshTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         if (current.isRevoked()) {
