@@ -198,7 +198,11 @@ public class AuthService {
     }
 
     private void enforceDeviceLimit(Long userId) {
-        List<RefreshToken> activeTokens = refreshTokenRepository.findByUserIdAndRevokedFalseOrderByIssuedAtAsc(userId);
+        // revokedFalse만 보고 만료 여부를 안 보면 만료된 지 오래된 토큰까지 활성 슬롯을
+        // 차지해서 진짜 활성 세션이 먼저 밀려날 수 있어서, 아직 만료 안 된
+        // 토큰만 세도록 expiresAt 조건이 들어간 쿼리로 교체했습니다.
+        List<RefreshToken> activeTokens = refreshTokenRepository
+                .findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByIssuedAtAsc(userId, LocalDateTime.now());
         if (activeTokens.size() < maxRefreshTokensPerUser) {
             return;
         }
