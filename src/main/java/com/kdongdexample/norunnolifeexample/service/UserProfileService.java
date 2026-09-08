@@ -7,6 +7,7 @@ import com.kdongdexample.norunnolifeexample.exception.AuthenticatedUserNotFoundE
 import com.kdongdexample.norunnolifeexample.exception.UserProfileAlreadyExistsException;
 import com.kdongdexample.norunnolifeexample.repository.UserProfileRepository;
 import com.kdongdexample.norunnolifeexample.repository.UserRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,13 @@ public class UserProfileService {
                 request.goal()
         );
 
-        return userProfileRepository.save(profile);
+        // existsByUserId 체크와 save() 사이에 동시 요청이 끼어들면 둘 다 체크를 통과하고
+        // signup()처럼 user_id 유니크 제약 위반이 그대로 터질 수 있습니다.
+        // saveAndFlush로 즉시 반영시켜서 제약 위반을 여기서 잡아 예외로 변환 합니다.
+        try {
+            return userProfileRepository.saveAndFlush(profile);
+        } catch (DataIntegrityViolationException e) {
+            throw new UserProfileAlreadyExistsException(userId);
+        }
     }
 }
