@@ -287,7 +287,7 @@ class AuthServiceTest {
     void refresh_success_rotatesTokenAndReturnsNewTokens() {
         RefreshToken existing = RefreshToken.issue(1L, "old-hash", "family-A", LocalDateTime.now().plusDays(1));
         given(refreshTokenProvider.hash("raw-old-token")).willReturn("old-hash");
-        given(refreshTokenRepository.findByTokenHash("old-hash")).willReturn(Optional.of(existing));
+        given(refreshTokenRepository.findByTokenHashForUpdate("old-hash")).willReturn(Optional.of(existing));
         given(userRepository.findById(1L))
                 .willReturn(Optional.of(createLocalUserWithId(1L, "user@test.com", "encoded-password")));
         given(jwtTokenProvider.createAccessToken(1L, "user@test.com")).willReturn("new-access-token");
@@ -311,7 +311,7 @@ class AuthServiceTest {
         RefreshToken revoked = RefreshToken.issue(1L, "revoked-hash", "family-A", LocalDateTime.now().plusDays(1));
         revoked.revoke();
         given(refreshTokenProvider.hash("stolen-token")).willReturn("revoked-hash");
-        given(refreshTokenRepository.findByTokenHash("revoked-hash")).willReturn(Optional.of(revoked));
+        given(refreshTokenRepository.findByTokenHashForUpdate("revoked-hash")).willReturn(Optional.of(revoked));
 
         assertThatThrownBy(() -> service().refresh("stolen-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -325,7 +325,7 @@ class AuthServiceTest {
     void refresh_expiredToken_throwsWithoutFamilyRevoke() {
         RefreshToken expired = RefreshToken.issue(1L, "expired-hash", "family-A", LocalDateTime.now().minusDays(1));
         given(refreshTokenProvider.hash("expired-token")).willReturn("expired-hash");
-        given(refreshTokenRepository.findByTokenHash("expired-hash")).willReturn(Optional.of(expired));
+        given(refreshTokenRepository.findByTokenHashForUpdate("expired-hash")).willReturn(Optional.of(expired));
 
         assertThatThrownBy(() -> service().refresh("expired-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
@@ -337,7 +337,7 @@ class AuthServiceTest {
     @DisplayName("존재하지 않는 리프레시 토큰이면 InvalidRefreshTokenException이 발생한다")
     void refresh_unknownToken_throwsInvalidRefreshTokenException() {
         given(refreshTokenProvider.hash("unknown-token")).willReturn("unknown-hash");
-        given(refreshTokenRepository.findByTokenHash("unknown-hash")).willReturn(Optional.empty());
+        given(refreshTokenRepository.findByTokenHashForUpdate("unknown-hash")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().refresh("unknown-token"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
