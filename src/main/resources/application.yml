@@ -17,7 +17,11 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
-  access-token-expiration-ms: 3600000
+  access-token-expiration-ms: 1800000
+  refresh-token-expiration-ms: 1209600000
+
+auth:
+  max-refresh-tokens-per-user: 5
 
 google:
   client-id: ${GOOGLE_CLIENT_ID:local-dev-placeholder-client-id}

@@ -73,6 +73,9 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
+        // 리프레시 토큰을 쿠키로 주고받으려면 브라우저가 cross-origin 요청에도 쿠키를
+        // 실어 보내야 하는데 이게 꺼져 있으면 브라우저가 쿠키를 아예 실지 않습니다.
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
