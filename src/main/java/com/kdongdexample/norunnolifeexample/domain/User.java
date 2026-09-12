@@ -5,6 +5,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Locale;
+
 @Entity
 @Table(
         name = "users",
@@ -39,6 +41,12 @@ public class User {
     @Column(name = "provider_id")
     private String providerId;
 
+    @Column(name = "nickname")
+    private String nickname;
+
+    @Column(unique = true)
+    private String nicknameNormalized;
+
     private User(String email, String password, UserRole role, AuthProvider provider, String providerId) {
         this.email = email;
         this.password = password;
@@ -58,5 +66,10 @@ public class User {
 
     public boolean hasPassword() {
         return password != null;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+        this.nicknameNormalized = nickname.toLowerCase();
     }
 }
