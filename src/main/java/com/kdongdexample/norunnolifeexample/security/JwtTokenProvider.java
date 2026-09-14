@@ -25,12 +25,19 @@ public class JwtTokenProvider {
     }
 
     public String createAccessToken(Long userId, String email) {
+        return createAccessToken(userId, email, null);
+    }
+
+    // nickname은 nullable(가입 직후엔 아직 없음) - JJWT는 claim 값이 null이면 그 claim을
+    // 아예 안 넣어주므로, 프론트는 페이로드에 nickname 키 자체가 없는 걸 "미설정"으로 보면 된다.
+    public String createAccessToken(Long userId, String email, String nickname) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + accessTokenExpirationMs);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("nickname", nickname)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)

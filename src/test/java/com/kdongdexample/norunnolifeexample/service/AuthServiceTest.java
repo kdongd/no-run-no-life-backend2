@@ -129,7 +129,7 @@ class AuthServiceTest {
         User user = createLocalUserWithId(1L, "user@test.com", "encoded-password");
         given(userRepository.findByEmail("user@test.com")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("password1234", "encoded-password")).willReturn(true);
-        given(jwtTokenProvider.createAccessToken(1L, "user@test.com")).willReturn("access-token");
+        given(jwtTokenProvider.createAccessToken(1L, "user@test.com", null)).willReturn("access-token");
         given(refreshTokenProvider.generate()).willReturn("raw-refresh-token");
         given(refreshTokenProvider.hash("raw-refresh-token")).willReturn("hashed-refresh-token");
 
@@ -189,7 +189,7 @@ class AuthServiceTest {
         User user = createLocalUserWithId(1L, "user@test.com", "encoded-password");
         given(userRepository.findByEmail("user@test.com")).willReturn(Optional.of(user));
         given(passwordEncoder.matches("password1234", "encoded-password")).willReturn(true);
-        given(jwtTokenProvider.createAccessToken(1L, "user@test.com")).willReturn("access-token");
+        given(jwtTokenProvider.createAccessToken(1L, "user@test.com", null)).willReturn("access-token");
         given(refreshTokenProvider.generate()).willReturn("raw-refresh-token");
         given(refreshTokenProvider.hash("raw-refresh-token")).willReturn("hashed-refresh-token");
 
@@ -220,7 +220,7 @@ class AuthServiceTest {
         given(userRepository.findByEmail("new-google@test.com")).willReturn(Optional.empty());
         User created = createGoogleUserWithId(2L, "new-google@test.com", "google-sub-2");
         given(userRepository.save(any(User.class))).willReturn(created);
-        given(jwtTokenProvider.createAccessToken(2L, "new-google@test.com")).willReturn("google-access-token");
+        given(jwtTokenProvider.createAccessToken(2L, "new-google@test.com", null)).willReturn("google-access-token");
         given(refreshTokenProvider.generate()).willReturn("raw-refresh-token");
         given(refreshTokenProvider.hash("raw-refresh-token")).willReturn("hashed-refresh-token");
 
@@ -244,7 +244,7 @@ class AuthServiceTest {
         given(googleIdTokenValidator.verify("valid-id-token")).willReturn(payload);
         User existing = createLocalUserWithId(3L, "existing@test.com", "encoded-password");
         given(userRepository.findByEmail("existing@test.com")).willReturn(Optional.of(existing));
-        given(jwtTokenProvider.createAccessToken(3L, "existing@test.com")).willReturn("existing-access-token");
+        given(jwtTokenProvider.createAccessToken(3L, "existing@test.com", null)).willReturn("existing-access-token");
         given(refreshTokenProvider.generate()).willReturn("raw-refresh-token");
         given(refreshTokenProvider.hash("raw-refresh-token")).willReturn("hashed-refresh-token");
 
@@ -290,7 +290,7 @@ class AuthServiceTest {
         given(refreshTokenRepository.findByTokenHashForUpdate("old-hash")).willReturn(Optional.of(existing));
         given(userRepository.findById(1L))
                 .willReturn(Optional.of(createLocalUserWithId(1L, "user@test.com", "encoded-password")));
-        given(jwtTokenProvider.createAccessToken(1L, "user@test.com")).willReturn("new-access-token");
+        given(jwtTokenProvider.createAccessToken(1L, "user@test.com", null)).willReturn("new-access-token");
         given(refreshTokenProvider.generate()).willReturn("raw-new-token");
         given(refreshTokenProvider.hash("raw-new-token")).willReturn("new-hash");
 

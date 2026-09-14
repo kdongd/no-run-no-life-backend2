@@ -109,7 +109,7 @@ public class AuthService {
         }
 
         User user = maybeUser.get();
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getNickname());
         String refreshToken = issueRefreshToken(user.getId(), UUID.randomUUID().toString());
 
         return new AuthTokens(accessToken, refreshToken);
@@ -137,7 +137,7 @@ public class AuthService {
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> userRepository.save(User.createOAuth(email, AuthProvider.GOOGLE, googleUserId)));
 
-            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+            String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getNickname());
             String refreshToken = issueRefreshToken(user.getId(), UUID.randomUUID().toString());
 
             return new AuthTokens(accessToken, refreshToken);
@@ -174,7 +174,7 @@ public class AuthService {
         User user = userRepository.findById(current.getUserId())
                 .orElseThrow(() -> new AuthenticatedUserNotFoundException(current.getUserId()));
 
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail());
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getEmail(), user.getNickname());
         String newRefreshToken = issueRefreshToken(user.getId(), current.getTokenFamily());
 
         return new AuthTokens(accessToken, newRefreshToken);
