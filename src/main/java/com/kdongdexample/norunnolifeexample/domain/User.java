@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Locale;
 
 
 @Entity
@@ -70,6 +71,6 @@ public class User {
 
     public void updateNickname(String nickname) {
         this.nickname = nickname;
-        this.nicknameNormalized = nickname.toLowerCase();
+        this.nicknameNormalized = nickname.toLowerCase(Locale.ROOT);
     }
 }

@@ -81,4 +81,16 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), e.getMessage(), List.of());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
+
+    @ExceptionHandler(InvalidNicknameException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidNickname(InvalidNicknameException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), e.getMessage(), List.of());
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(NicknameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleNicknameAlreadyExists(NicknameAlreadyExistsException e) {
+        ErrorResponse response = new ErrorResponse(HttpStatus.CONFLICT.value(), e.getMessage(), List.of());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }
