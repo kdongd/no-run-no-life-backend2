@@ -25,7 +25,7 @@
 | CI | GitHub Actions               |
 
 ---
-
+ 
 ## ⚙️ 실행 방법
 
 로컬에 MySQL이 떠 있어야 하고, `norunnolife` 데이터베이스와 접속 계정이 필요합니다. `spring.datasource.username`/`password`는 `application.yml`에서 환경변수 `DB_USERNAME`/`DB_PASSWORD`로 주입받으므로, 실행 전에 값을 설정해야 합니다. `JWT_SECRET`은 기본값이 없어 반드시 직접 설정해야 하며(미설정 시 서버가 부팅되지 않습니다), `GOOGLE_CLIENT_ID`는 `application.yml`에 로컬 개발용 플레이스홀더가 들어 있어 생략해도 서버는 뜨지만 실제 Google 로그인은 동작하지 않습니다.
