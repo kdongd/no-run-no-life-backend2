@@ -25,7 +25,6 @@
 | CI | GitHub Actions               |
 
 
-
 ---
  
 ## ⚙️ 실행 방법
